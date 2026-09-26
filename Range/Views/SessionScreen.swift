@@ -244,8 +244,8 @@ struct SessionLiveView: View {
                 if let toast = session.toast {
                     // Lower-leading corner: clear of the fold, the arc and the target line.
                     ToastView(toast: toast)
-                        .frame(maxWidth: min(400, max(260, layout.leadingWidth - 40)))
-                        .position(x: max(150, layout.leadingWidth / 2), y: size.height - 64)
+                        .frame(maxWidth: min(360, max(250, layout.leadingWidth - 110)))
+                        .position(x: max(145, (layout.leadingWidth - 70) / 2), y: size.height - 64)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .id(toast.id)
                 }
