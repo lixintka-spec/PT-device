@@ -6,7 +6,6 @@ struct DemoControlsView: View {
     @Environment(HingeEngine.self) private var hinge
     @Environment(Leveler.self) private var leveler
     @Environment(SessionEngine.self) private var session
-    @Environment(ProStore.self) private var store
     @Environment(AppState.self) private var app
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -59,13 +58,6 @@ struct DemoControlsView: View {
                         app.lastSummary = nil
                     } label: { Label("Reset Demo Data", systemImage: "arrow.counterclockwise.circle") }
                     Toggle("Mute voice & tones", isOn: $app.isMuted)
-                }
-                Section("Range Clinic") {
-                    LabeledContent("RevenueCat", value: store.isConfigured ? "Configured" : "Demo mode (no API key)")
-                    LabeledContent("Clinic entitlement", value: store.isClinicUnlocked ? "Active" : "Locked")
-                    if store.isDemoMode {
-                        Button { store.demoLock() } label: { Label("Lock Clinic", systemImage: "lock") }
-                    }
                 }
             }
             .navigationTitle("Demo Controls")

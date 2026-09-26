@@ -20,6 +20,13 @@ START=40        # where Maria chooses to start stretching (any angle works)
 H_START=$((180 - START))
 H_LAST=$((180 - LAST))
 H_TARGET=$(echo "180 - $TARGET - 0.5" | bc)
+HOLD=3.8        # every rep holds 3 s at the top (plus a beat)
+
+# One rep: bend to a hinge angle, hold while the ring fills, come back to the start.
+rep() {
+  hinge -d "$DEVICE" sweep "$H_START" "$1" "${2:-2.0}"; sleep "$HOLD"
+  hinge -d "$DEVICE" sweep "$1" "$H_START" 1.6; sleep 0.8
+}
 
 beat() {
   echo
@@ -27,10 +34,10 @@ beat() {
   if [[ -z "${AUTO:-}" ]]; then read -r -p "  (Enter to continue) " _; fi
 }
 
-beat "Reset: phone CLOSED, fresh demo data, 5-rep goal. The outer display shows Maria's Today card."
+beat "Reset: phone CLOSED, fresh demo data, 4-rep goal. The outer display shows Maria's Home card."
 hinge -d "$DEVICE" close
 xcrun simctl terminate "$DEVICE" "$BUNDLE" >/dev/null 2>&1 || true
-xcrun simctl launch "$DEVICE" "$BUNDLE" -resetDemo -repGoal 5 ${AUTO:+-startSession} >/dev/null
+xcrun simctl launch "$DEVICE" "$BUNDLE" -resetDemo -repGoal 4 ${AUTO:+-startSession} >/dev/null
 sleep 3
 
 beat "Tap 'Start session' on the outer display (AUTO starts it for you), then open the phone."
@@ -41,36 +48,27 @@ beat "Maria chooses where to start: knee bent at ${START}°. Hold still (or tap 
 hinge -d "$DEVICE" sweep 180 "$H_START" 1.6
 sleep 4.5
 
-beat "Fold to last best (${LAST}°) — 'This is where you were.'"
-hinge -d "$DEVICE" sweep "$H_START" "$H_LAST" 2.0
-sleep 3
-hinge -d "$DEVICE" sweep "$H_LAST" "$H_START" 1.6
-sleep 0.8
+beat "Rep 1: bend to last best (${LAST}°), HOLD 3-2-1, back — 'That's where you were last time.'"
+rep "$H_LAST"
 
-beat "Reps from her start that push past the ghost arc."
-for peak in $((LAST + 1)) $((LAST + 3)); do
-  hinge -d "$DEVICE" sweep "$H_START" $((180 - peak)) 1.8; sleep 0.5
-  hinge -d "$DEVICE" sweep $((180 - peak)) "$H_START" 1.6; sleep 0.6
-done
+beat "Rep 2: past the ghost arc to $((LAST + 3))° — hold — new best + 'Unlocked: Climb stairs'."
+rep $((180 - LAST - 3))
 
 beat "A rushed rep — 'Slow down, controlled movement.'"
 hinge -d "$DEVICE" sweep "$H_START" 95 0.2; sleep 0.4
 hinge -d "$DEVICE" sweep 95 "$H_START" 1.2; sleep 2
 
-beat "Target ${TARGET}° — parking-sensor ticks, then 'Perfect. Hold.' for five seconds."
-hinge -d "$DEVICE" sweep "$H_START" "$H_TARGET" 2.4
-sleep 6.8
-hinge -d "$DEVICE" sweep "$H_TARGET" "$H_START" 1.6
-sleep 1.5
+beat "Rep 3: today's target ${TARGET}° — parking-sensor ticks, hold, back."
+rep "$H_TARGET" 2.4
 
-beat "Rep five of five — 'Set complete.'"
-hinge -d "$DEVICE" sweep "$H_START" 94 1.8; sleep 0.5
-hinge -d "$DEVICE" sweep 94 "$H_START" 1.6; sleep 2.5
+beat "Rep 4 of 4 — 'Set complete.'"
+rep $((180 - TARGET + 1)) 1.8
+sleep 1.5
 
 beat "Close the phone to save → recovery replay on the outer display."
 hinge -d "$DEVICE" sweep "$H_START" 0 0.6
 sleep 9
 
-beat "Open again flat to continue on the inner display (Progress / Care Team)."
+beat "Open again flat to continue on the inner display (Progress)."
 hinge -d "$DEVICE" open
 echo "Done."

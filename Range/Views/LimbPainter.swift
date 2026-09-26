@@ -160,9 +160,11 @@ enum LimbPainter {
     // MARK: - Guide (the calm, in-session arc)
 
     /// A quiet arc: no labels. Amber dot = where to go. Mint trail = your best today. Blue dot = your start.
+    /// While holding, a ring fills around the leg's position on the arc.
     static func drawGuide(in ctx: inout GraphicsContext, pivot: CGPoint, radius R: CGFloat,
                           flexion: Double, tilt: Double, start: Double?, ghost: Double?,
-                          target: Double?, accent: Color, zoneFrom: Double? = nil, emphasizeStart: Bool = false) {
+                          target: Double?, accent: Color, zoneFrom: Double? = nil, emphasizeStart: Bool = false,
+                          holdProgress: Double? = nil) {
         func p(_ deg: Double, _ r: CGFloat) -> CGPoint { jointPoint(pivot, flexion: deg, tilt: tilt, r) }
         func arc(_ a: Double, _ b: Double, _ r: CGFloat) -> Path {
             var path = Path()
@@ -194,7 +196,7 @@ enum LimbPainter {
         // Drawn just outside the leg's reach so the foot never hides where to go.
         let goalR = R + 30
         if let zoneFrom, let target, target > zoneFrom {
-            ctx.stroke(arc(zoneFrom, target, goalR), with: .color(RangeTheme.amber.opacity(0.45)),
+            ctx.stroke(arc(zoneFrom, target, goalR), with: .color(RangeTheme.amber.opacity(holdProgress == nil ? 0.45 : 0.8)),
                        style: StrokeStyle(lineWidth: 12, lineCap: .round))
         }
         if let start {
@@ -213,6 +215,16 @@ enum LimbPainter {
             let dot = p(target, goalR)
             ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 15, y: dot.y - 15, width: 30, height: 30)), with: .color(RangeTheme.amber.opacity(0.25)))
             ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 8, y: dot.y - 8, width: 16, height: 16)), with: .color(RangeTheme.amber))
+        }
+        if let holdProgress {
+            let center = p(flexion, goalR)
+            let ringR: CGFloat = 24
+            ctx.stroke(Path(ellipseIn: CGRect(x: center.x - ringR, y: center.y - ringR, width: ringR * 2, height: ringR * 2)),
+                       with: .color(RangeTheme.amber.opacity(0.25)), lineWidth: 6)
+            var fill = Path()
+            fill.addArc(center: center, radius: ringR, startAngle: .degrees(-90),
+                        endAngle: .degrees(-90 + 360 * max(0.001, holdProgress)), clockwise: false)
+            ctx.stroke(fill, with: .color(RangeTheme.amber), style: StrokeStyle(lineWidth: 6, lineCap: .round))
         }
     }
 

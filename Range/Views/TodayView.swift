@@ -22,11 +22,11 @@ struct TodayView: View {
                         } secondary: {
                             ScrollView { WeekPanel(patient: maria).padding(24) }
                         }
-                        .arrangementViewStyle(.split.axes(.horizontal))
+                        .arrangementViewStyle(.split)
                     }
                 }
             }
-            .navigationTitle("Today")
+            .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -53,7 +53,7 @@ struct TodayCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 12 : 18) {
             HStack {
-                Chip(text: "Day \(patient.dayToday) after surgery", systemImage: "calendar", tint: RangeTheme.sky)
+                Chip(text: "Day \(patient.dayToday) of recovery", systemImage: "calendar", tint: RangeTheme.sky)
                 Spacer()
                 Chip(text: "\(patient.streak)-day streak", systemImage: "flame.fill", tint: RangeTheme.amber)
             }
@@ -79,12 +79,6 @@ struct TodayCard: View {
                 }
             }
 
-            if doneToday == nil {
-                Text("Your comfortable max is \(Int(patient.comfortableMax))°. Let's aim for \(Int(patient.adaptiveTarget))° today.")
-                    .font(compact ? .subheadline : .title3)
-                    .foregroundStyle(RangeTheme.secondaryText)
-            }
-
             if let next = patient.nextMilestone {
                 HStack(spacing: 10) {
                     Image(systemName: next.symbol).font(.title3).foregroundStyle(RangeTheme.amber)
@@ -104,7 +98,7 @@ struct TodayCard: View {
 
             Button {
                 session.configure(for: patient)
-                app.tab = .session
+                app.tab = .exercise
                 session.begin()
             } label: {
                 Label(doneToday == nil ? "Start session" : "Another set", systemImage: "play.fill")
@@ -165,25 +159,9 @@ struct WeekPanel: View {
             .padding(16)
             .rangePanel()
 
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "stethoscope")
-                    .font(.title3)
-                    .foregroundStyle(RangeTheme.sky)
-                    .frame(width: 40, height: 40)
-                    .background(RangeTheme.sky.opacity(0.14), in: .circle)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Dr. Kim · your PT").font(.subheadline.weight(.semibold))
-                    Text("Great week, \(patient.firstName). Keep the holds slow — straightening fully matters as much as bending.")
-                        .font(.subheadline)
-                        .foregroundStyle(RangeTheme.secondaryText)
-                }
-            }
-            .padding(16)
-            .rangePanel()
-
             HStack {
-                StatTile(title: "Extension", value: "−\(Int(patient.extensionDeficit))°", detail: "from straight", tint: RangeTheme.sky)
-                StatTile(title: "Comfortable", value: "\(Int(patient.comfortableMax))°", detail: "median of 3", tint: RangeTheme.mint)
+                StatTile(title: "Best", value: "\(Int(patient.bestFlexion))°", detail: "knee bend", tint: RangeTheme.mint)
+                StatTile(title: "Gained", value: "+\(Int(patient.gainSinceFirstSession))°", detail: "since day 1", tint: RangeTheme.sky)
             }
         }
     }

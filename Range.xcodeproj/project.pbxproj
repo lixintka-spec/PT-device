@@ -8,9 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01EF2D34172C93DCD7A3187C /* Leveler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576D5FA22D73C9A4F9A24F68 /* Leveler.swift */; };
-		0CC3FA6AF5D8582234DFFC68 /* NoteGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85A8A0BB006C8FB95CE52F5B /* NoteGenerator.swift */; };
 		1508C0F58D87546E613EE202 /* RepGoalViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B412E68C7A1448FABE42127 /* RepGoalViews.swift */; };
-		22CF422B416994A8B632C827 /* Clinical.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3449E4F5427ADB84B9C07C /* Clinical.swift */; };
 		23750AEC6433BF3FF769CD6F /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB7580F8C32BE0A7BFC2B84 /* Secrets.swift */; };
 		247E6FF4C428E9A4585322DD /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 6DC8EB20C3A7578E244F1ED7 /* RevenueCat */; };
 		3538933FEC4F6C49D0A5AC42 /* DemoControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D47ECC93A694B4F71CB8CFD3 /* DemoControlsView.swift */; };
@@ -21,17 +19,15 @@
 		63D3B25A9520C26B095644CB /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4971A9E003382C984C6B7CC4 /* RootView.swift */; };
 		65A164A24BB8E8B01E70396E /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = B673ABB2071FEA5D081F9E44 /* Feedback.swift */; };
 		7EEAC0500FE29F776935F532 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42F497090FE46B48961330F /* ProgressScreen.swift */; };
+		8AA0137AE8E54E5E6A78F87A /* PatientStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73442377F13C1DB5558971F5 /* PatientStats.swift */; };
 		8AE4047F61794B0343E79AB2 /* LimbPainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CF3839136608143EE2BB284 /* LimbPainter.swift */; };
 		8EB415DC05E133F147A1FE90 /* RangeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91C9217E9FAE05060A1B0C6A /* RangeApp.swift */; };
 		96EB770764B2E751C187F245 /* HingeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0B6F43503E4D47946711A58 /* HingeEngine.swift */; };
 		987D2E64C402C5AC1F3CD500 /* FoldLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E59E5C649124865F707F79 /* FoldLayout.swift */; };
 		99D173EE084B738BDF6EDA37 /* ProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B25D88007A30A781542EBE /* ProStore.swift */; };
 		9B365044E3470F7839A8B2BF /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BDDA1AFDD003928E0ADD7E /* Models.swift */; };
-		9FDA6C83D8503693B5E45EC8 /* PaywallScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77D9D209ACD7E57BDF66862C /* PaywallScreen.swift */; };
 		AB07E717A6B4FBE6A16295B1 /* SessionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3C828ECED796E98B8D27B5 /* SessionEngine.swift */; };
 		BB059709144F783FCE9A6793 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17070CB8F8E1575A1D73003F /* TodayView.swift */; };
-		BE7C5ED24F9225E2155D8466 /* CareTeamScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA962608275F1CEFB04D82F /* CareTeamScreen.swift */; };
-		CF06F82E8CC906FCC9521C1E /* CameraAssessmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226BC58620241E4B7849FBF /* CameraAssessmentView.swift */; };
 		E9933700DBDA60BA21A2C06D /* SessionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F4A23DD63513BD7EA126D19 /* SessionScreen.swift */; };
 		EB1300B4CDA96E5735D52999 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2739AF3D987A4F7049F13F19 /* Assets.xcassets */; };
 		EECC60564FC8374E7A7D0C86 /* RecoveryReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F7D40A4DF653D62E13B7EA /* RecoveryReplayView.swift */; };
@@ -40,19 +36,15 @@
 /* Begin PBXFileReference section */
 		04F7D40A4DF653D62E13B7EA /* RecoveryReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryReplayView.swift; sourceTree = "<group>"; };
 		17070CB8F8E1575A1D73003F /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
-		1F3449E4F5427ADB84B9C07C /* Clinical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clinical.swift; sourceTree = "<group>"; };
 		23BDDA1AFDD003928E0ADD7E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		2739AF3D987A4F7049F13F19 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		32B25D88007A30A781542EBE /* ProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStore.swift; sourceTree = "<group>"; };
 		358F6DAC1ACAEE40B8603E31 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		4971A9E003382C984C6B7CC4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		4B412E68C7A1448FABE42127 /* RepGoalViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepGoalViews.swift; sourceTree = "<group>"; };
-		4FA962608275F1CEFB04D82F /* CareTeamScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CareTeamScreen.swift; sourceTree = "<group>"; };
 		576D5FA22D73C9A4F9A24F68 /* Leveler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Leveler.swift; sourceTree = "<group>"; };
 		5F4A23DD63513BD7EA126D19 /* SessionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionScreen.swift; sourceTree = "<group>"; };
-		6226BC58620241E4B7849FBF /* CameraAssessmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraAssessmentView.swift; sourceTree = "<group>"; };
-		77D9D209ACD7E57BDF66862C /* PaywallScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallScreen.swift; sourceTree = "<group>"; };
-		85A8A0BB006C8FB95CE52F5B /* NoteGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteGenerator.swift; sourceTree = "<group>"; };
+		73442377F13C1DB5558971F5 /* PatientStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientStats.swift; sourceTree = "<group>"; };
 		91C9217E9FAE05060A1B0C6A /* RangeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RangeApp.swift; sourceTree = "<group>"; };
 		9CF3839136608143EE2BB284 /* LimbPainter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimbPainter.swift; sourceTree = "<group>"; };
 		B42F497090FE46B48961330F /* ProgressScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressScreen.swift; sourceTree = "<group>"; };
@@ -103,7 +95,6 @@
 				B673ABB2071FEA5D081F9E44 /* Feedback.swift */,
 				E0B6F43503E4D47946711A58 /* HingeEngine.swift */,
 				576D5FA22D73C9A4F9A24F68 /* Leveler.swift */,
-				85A8A0BB006C8FB95CE52F5B /* NoteGenerator.swift */,
 				CD3C828ECED796E98B8D27B5 /* SessionEngine.swift */,
 			);
 			path = Engine;
@@ -133,8 +124,8 @@
 		C90601C638E845450CF5E6B5 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				1F3449E4F5427ADB84B9C07C /* Clinical.swift */,
 				23BDDA1AFDD003928E0ADD7E /* Models.swift */,
+				73442377F13C1DB5558971F5 /* PatientStats.swift */,
 				EF76950B4437600BB503027A /* SeedData.swift */,
 			);
 			path = Model;
@@ -143,12 +134,9 @@
 		CC09A09D84CCDCBF700FD273 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				6226BC58620241E4B7849FBF /* CameraAssessmentView.swift */,
-				4FA962608275F1CEFB04D82F /* CareTeamScreen.swift */,
 				D47ECC93A694B4F71CB8CFD3 /* DemoControlsView.swift */,
 				C3E59E5C649124865F707F79 /* FoldLayout.swift */,
 				9CF3839136608143EE2BB284 /* LimbPainter.swift */,
-				77D9D209ACD7E57BDF66862C /* PaywallScreen.swift */,
 				B42F497090FE46B48961330F /* ProgressScreen.swift */,
 				04F7D40A4DF653D62E13B7EA /* RecoveryReplayView.swift */,
 				4B412E68C7A1448FABE42127 /* RepGoalViews.swift */,
@@ -246,9 +234,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F0FA1182BAD4151EB62B724 /* AppState.swift in Sources */,
-				CF06F82E8CC906FCC9521C1E /* CameraAssessmentView.swift in Sources */,
-				BE7C5ED24F9225E2155D8466 /* CareTeamScreen.swift in Sources */,
-				22CF422B416994A8B632C827 /* Clinical.swift in Sources */,
 				3538933FEC4F6C49D0A5AC42 /* DemoControlsView.swift in Sources */,
 				65A164A24BB8E8B01E70396E /* Feedback.swift in Sources */,
 				987D2E64C402C5AC1F3CD500 /* FoldLayout.swift in Sources */,
@@ -256,8 +241,7 @@
 				01EF2D34172C93DCD7A3187C /* Leveler.swift in Sources */,
 				8AE4047F61794B0343E79AB2 /* LimbPainter.swift in Sources */,
 				9B365044E3470F7839A8B2BF /* Models.swift in Sources */,
-				0CC3FA6AF5D8582234DFFC68 /* NoteGenerator.swift in Sources */,
-				9FDA6C83D8503693B5E45EC8 /* PaywallScreen.swift in Sources */,
+				8AA0137AE8E54E5E6A78F87A /* PatientStats.swift in Sources */,
 				99D173EE084B738BDF6EDA37 /* ProStore.swift in Sources */,
 				7EEAC0500FE29F776935F532 /* ProgressScreen.swift in Sources */,
 				8EB415DC05E133F147A1FE90 /* RangeApp.swift in Sources */,
@@ -287,7 +271,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Range;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Range uses the camera during clinic assessments so your therapist can review your movement.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Range does not record audio.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Range uses motion to check that your limb stays level during each exercise.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -316,7 +299,6 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Range;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Range uses the camera during clinic assessments so your therapist can review your movement.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Range does not record audio.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Range uses motion to check that your limb stays level during each exercise.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

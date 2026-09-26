@@ -31,7 +31,7 @@ struct ProgressScreen: View {
                                     .rangePanel()
                                 HStack {
                                     StatTile(title: "Best", value: "\(Int(maria.bestFlexion))°", detail: "knee flexion", tint: RangeTheme.mint)
-                                    StatTile(title: "Extension", value: "−\(Int(maria.extensionDeficit))°", detail: "from straight", tint: RangeTheme.sky)
+                                    StatTile(title: "Gained", value: "+\(Int(maria.gainSinceFirstSession))°", detail: "since day 1", tint: RangeTheme.sky)
                                 }
                                 HStack {
                                     StatTile(title: "Streak", value: "\(maria.streak)", detail: "days in a row", tint: RangeTheme.amber)
@@ -48,51 +48,35 @@ struct ProgressScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { app.tab = .session } label: { Label("New Session", systemImage: "play.fill") }
+                    Button { app.tab = .exercise } label: { Label("New Session", systemImage: "play.fill") }
                 }
             }
         }
     }
 }
 
-/// Flexion over time against the typical recovery band, with the measurement-noise band
-/// so only real gains get celebrated.
+/// How far the knee bends, day by day.
 struct RecoveryChart: View {
     var patient: Patient
     var showsHeader = true
 
-    private struct BandPoint: Identifiable {
-        let day: Int
-        let low: Double
-        let high: Double
-        var id: Int { day }
-    }
-
     var body: some View {
         let sessions = patient.sortedSessions
-        let lastDay = max(patient.dayToday, sessions.last.map { patient.day(of: $0.date) } ?? 1)
-        let band = stride(from: 0, through: lastDay + 3, by: 1).map { d -> BandPoint in
-            let b = Clinical.expectedBand(joint: patient.joint, day: Double(d))
-            return BandPoint(day: d, low: b.low, high: b.high)
-        }
-        let best = patient.bestFlexion
         VStack(alignment: .leading, spacing: 10) {
             if showsHeader {
                 HStack {
-                    Text("Flexion over time").font(.headline)
+                    Text("Knee bend over time").font(.headline)
                     Spacer()
-                    Chip(text: "±\(Int(Clinical.measurementNoise))° noise band", systemImage: "waveform.path", tint: RangeTheme.secondaryText)
+                    Chip(text: "+\(Int(patient.gainSinceFirstSession))° since day 1", systemImage: "arrow.up.right", tint: RangeTheme.mint)
                 }
             }
             Chart {
-                ForEach(band) { p in
-                    AreaMark(x: .value("Day", p.day), yStart: .value("Low", p.low), yEnd: .value("High", p.high))
-                        .foregroundStyle(.white.opacity(0.07))
+                ForEach(sessions, id: \.id) { s in
+                    AreaMark(x: .value("Day", patient.day(of: s.date)), yStart: .value("Base", 40), yEnd: .value("Flexion", s.peakFlexion))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(LinearGradient(colors: [RangeTheme.mint.opacity(0.35), RangeTheme.mint.opacity(0)],
+                                                        startPoint: .top, endPoint: .bottom))
                 }
-                RectangleMark(xStart: .value("Start", 0), xEnd: .value("End", lastDay + 3),
-                              yStart: .value("Noise low", best - Clinical.measurementNoise),
-                              yEnd: .value("Noise high", best + Clinical.measurementNoise))
-                    .foregroundStyle(RangeTheme.mint.opacity(0.06))
                 if let next = patient.nextMilestone {
                     RuleMark(y: .value("Next milestone", next.degrees))
                         .foregroundStyle(RangeTheme.amber.opacity(0.5))
@@ -114,11 +98,8 @@ struct RecoveryChart: View {
                 }
             }
             .chartYScale(domain: 40...130)
-            .chartXAxisLabel("Days since surgery")
+            .chartXAxisLabel("Day of recovery")
             .frame(height: 240)
-            Text("Grey band: typical range for this procedure (illustrative). Changes inside the mint band are within measurement error.")
-                .font(.caption2)
-                .foregroundStyle(RangeTheme.tertiaryText)
         }
     }
 }

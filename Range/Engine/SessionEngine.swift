@@ -26,10 +26,13 @@ struct Rep: Identifiable, Hashable {
     let peak: Double
     let compensated: Bool
     let tooFast: Bool
+    /// Held at the top for the full hold. Only held, controlled, level reps count.
+    let held: Bool
+    var counts: Bool { held && !compensated && !tooFast }
 }
 
 struct CoachToast: Identifiable, Equatable {
-    enum Kind { case info, tip, success, warning, milestone }
+    enum Kind { case info, success, warning, milestone }
     let id = UUID()
     let kind: Kind
     let title: String
@@ -48,7 +51,7 @@ struct SessionSummary: Equatable {
     let target: Double
     let milestone: Milestone?
     var gain: Double { peak - previousBest }
-    var beyondNoise: Bool { gain >= Clinical.measurementNoise }
+    var isNewBest: Bool { gain >= 1 }
 }
 
 @MainActor
@@ -56,13 +59,26 @@ struct SessionSummary: Equatable {
 final class SessionEngine {
     enum Phase: Equatable {
         /// `.matchLastBest` is simply rep 1, aimed at yesterday's best instead of today's target.
-        case ready, positioning, matchLastBest, reps, holding, complete
+        case ready, positioning, matchLastBest, reps, complete
         var isActive: Bool { self != .ready && self != .complete }
-        var isExercising: Bool { self == .matchLastBest || self == .reps || self == .holding }
+        var isExercising: Bool { self == .matchLastBest || self == .reps }
     }
 
-    /// Every rep is the same two moves: bend out to the goal, then come back to your start.
-    enum RepStage { case out, back }
+    /// Every rep is the same three moves: bend out to the goal, hold it, come back to your start.
+    enum RepStage: Int, Comparable {
+        case out, hold, back
+        static func < (a: RepStage, b: RepStage) -> Bool { a.rawValue < b.rawValue }
+    }
+
+    /// How long to hold at the top of every rep.
+    static let holdSeconds: Double = 3
+    /// Stopping this still (°/s) inside the goal zone for `settleSeconds` starts the hold.
+    private static let stillVelocity: Double = 6
+    private static let settleSeconds: Double = 0.4
+    /// Sweeping through faster than this (°/s) — e.g. closing the phone — never starts a hold.
+    private static let maxHoldStartVelocity: Double = 60
+    /// How far below the goal zone the knee can sag before the hold pauses.
+    private static let holdSlack: Double = 3
 
     // Configuration
     var exercise: Exercise = .seatedKneeBend
@@ -84,7 +100,11 @@ final class SessionEngine {
     private(set) var sessionBest: Double = 0
     private(set) var reps: [Rep] = []
     private(set) var positionProgress: Double = 0   // 0...1 over 3 s
-    private(set) var holdRemaining: Double = 5
+    private(set) var holdRemaining: Double = SessionEngine.holdSeconds
+    /// The knee sagged out of the goal zone mid-hold; the countdown waits for it.
+    private(set) var holdPaused = false
+    /// Came back without finishing the hold: this rep won't count.
+    private(set) var holdMissed = false
     private(set) var targetHeld = false
     private(set) var toast: CoachToast?
     private(set) var unlockedMilestone: Milestone?
@@ -95,13 +115,14 @@ final class SessionEngine {
     private(set) var startAngle: Double = 0
 
     var hasStart: Bool { phase != .ready && phase != .positioning }
-    /// Reps that count: controlled and with the thigh level.
-    var cleanReps: Int { reps.filter { !$0.compensated && !$0.tooFast }.count }
+    /// Reps that count: held, controlled and with the thigh level.
+    var cleanReps: Int { reps.filter(\.counts).count }
+    var holdProgress: Double { 1 - holdRemaining / Self.holdSeconds }
     var goalReached: Bool { cleanReps >= repGoal }
 
     /// Where this rep is aiming: yesterday's best on the first rep, today's target after that.
     var currentGoal: Double { phase == .matchLastBest ? lastBest : target }
-    /// Reach this far and the rep is "out" — the chime plays and it's time to come back.
+    /// Stop anywhere from here to the goal and the hold starts.
     var repTurn: Double { startAngle + max(6, (currentGoal - startAngle) * 0.8) }
     /// Back within this of your start and the rep counts.
     var repHome: Double { startAngle + max(4, (currentGoal - startAngle) * 0.15) }
@@ -115,12 +136,13 @@ final class SessionEngine {
         switch phase {
         case .ready: "Ready when you are"
         case .positioning: "Choose your start"
-        case .holding: "Hold"
         case .complete: "Saved"
         case .matchLastBest, .reps:
-            if goalReached && repStage == .out { "Set complete" }
-            else if repStage == .out { "Bend to \(Int(currentGoal))°" }
-            else { "Now back to \(Int(startAngle))°" }
+            switch repStage {
+            case .out: goalReached ? "Set complete" : "Bend to \(Int(currentGoal))°"
+            case .hold: holdPaused ? "Bend a little more" : "Hold"
+            case .back: "Now back to \(Int(startAngle))°"
+            }
         }
     }
 
@@ -131,13 +153,18 @@ final class SessionEngine {
             if !canStart(at: flexion) { return "Straighten a little more — leave room to bend" }
             if !isLevel { return "Level your \(exercise.stableSegment) first" }
             return positionProgress > 0.05 ? "Setting your start… \(Int(ceil(3 - positionProgress * 3)))" : "Get comfortable, then hold still"
-        case .holding:
-            return "\(Int(ceil(holdRemaining))) more second\(Int(ceil(holdRemaining)) == 1 ? "" : "s")"
         case .matchLastBest, .reps:
-            if goalReached && repStage == .out { return "Close the phone to save" }
-            let toGo = repStage == .out ? currentGoal - flexion : flexion - startAngle
-            if repStage == .out && phase == .matchLastBest && toGo <= 3 { return "Where you were last time" }
-            return toGo > 1 ? "\(Int(toGo.rounded()))° to go" : (repStage == .out ? "That's it" : "Almost there")
+            switch repStage {
+            case .out:
+                if goalReached { return "Close the phone to save" }
+                if flexion >= repTurn { return repTooFast ? "Too fast — this one won't count" : "Stop and hold it here" }
+                return "\(Int((currentGoal - flexion).rounded()))° to go, then hold"
+            case .hold:
+                return holdPaused ? "Hold paused — bend back into the amber" : "Keep it still"
+            case .back:
+                let toGo = flexion - startAngle
+                return toGo > 1 ? "\(Int(toGo.rounded()))° to go" : "Almost there"
+            }
         default:
             return ""
         }
@@ -154,10 +181,10 @@ final class SessionEngine {
     private var slowDownPending = false
     private var elapsed: Double = 0
     private var toastExpiry: Double = 0
-    private var lastSpokenHold = 6
+    private var lastSpokenHold = Int(SessionEngine.holdSeconds)
+    private var settle: Double = 0
     private var slowDownCooldown: Double = 0
     private var driftCooldown: Double = 0
-    private var tipShown = false
     var onFinished: ((SessionSummary) -> Void)?
 
     func attach(hinge: HingeEngine, leveler: Leveler, feedback: FeedbackCoordinator) {
@@ -197,7 +224,7 @@ final class SessionEngine {
         guard phase.isActive, phase != .positioning else { return }
         phase = .positioning
         positionProgress = 0
-        repStage = .out
+        beginRep()
         feedback?.say("Move to your new start and hold still.")
     }
 
@@ -211,12 +238,7 @@ final class SessionEngine {
         feedback?.success()
         // Rep 1 aims at yesterday's best when there's room for it; otherwise straight to today's target.
         phase = (reps.isEmpty && lastBest > startAngle + 10 && lastBest < target) ? .matchLastBest : .reps
-        feedback?.say("Start set. Bend to \(Int(currentGoal)) degrees, then come back.")
-        if !tipShown {
-            tipShown = true
-            show(.tip, "One rep = out and back",
-                 "Bend to the amber dot, then come back to the blue dot.", "arrow.left.arrow.right", duration: 6)
-        }
+        feedback?.say("Start set. Bend to \(Int(currentGoal)) degrees and hold.")
     }
 
     func reset() {
@@ -225,20 +247,22 @@ final class SessionEngine {
         sessionBest = 0
         reps = []
         positionProgress = 0
-        holdRemaining = 5
         targetHeld = false
         toast = nil
         unlockedMilestone = nil
         summary = nil
         startAngle = 0
-        tipShown = false
         beginRep()
-        lastSpokenHold = 6
         feedback?.setTone(active: false, flexion: 0)
     }
 
     private func beginRep() {
         repStage = .out
+        holdRemaining = Self.holdSeconds
+        holdPaused = false
+        holdMissed = false
+        lastSpokenHold = Int(Self.holdSeconds)
+        settle = 0
         repPeak = 0
         repCompensated = false
         repTooFast = false
@@ -278,55 +302,70 @@ final class SessionEngine {
             repPeak = max(repPeak, flexion)
             switch repStage {
             case .out:
-                if !goalReached { feedback?.proximity(flexion: flexion, target: currentGoal) }
-                if flexion >= currentGoal - 1 {
-                    // Reached the dot. Today's target gets one five-second hold.
-                    if phase == .reps && !targetHeld && !compensatingNow {
-                        repStage = .back
-                        phase = .holding
-                        holdRemaining = 5
-                        lastSpokenHold = 6
-                        feedback?.perfect()
-                        feedback?.say("Perfect. Hold.")
-                    } else {
-                        turnAround()
+                // Set done: extra movement (like closing the phone) isn't a rep.
+                guard !goalReached else { break }
+                feedback?.proximity(flexion: flexion, target: currentGoal)
+                settle = flexion >= repTurn && abs(velocity) < Self.stillVelocity ? settle + dt : 0
+                let atDot = flexion >= currentGoal - 1 && abs(velocity) < Self.maxHoldStartVelocity
+                // A rushed rep already can't count, so it doesn't get a hold.
+                if !repTooFast && (atDot || settle >= Self.settleSeconds) {
+                    startHold()
+                } else if repPeak >= repTurn && flexion <= repHome {
+                    completeRep(held: false)   // out and straight back, no hold
+                }
+            case .hold:
+                if flexion >= repTurn - Self.holdSlack {
+                    holdPaused = false
+                    holdRemaining = max(0, holdRemaining - dt)
+                    let whole = Int(ceil(holdRemaining))
+                    if whole < lastSpokenHold && whole > 0 {
+                        lastSpokenHold = whole
+                        feedback?.tick(intensity: 0.9)
+                        feedback?.say("\(whole)")
                     }
-                } else if flexion >= repTurn && velocity < -6 {
-                    // Went as far as they could inside the amber zone and started back: still a rep.
-                    turnAround()
+                    if holdRemaining <= 0 { completeHold() }
+                } else if flexion < (startAngle + repTurn) / 2 {
+                    // Heading home: the hold is missed, and the screen says so.
+                    holdMissed = true
+                    holdPaused = false
+                    repStage = .back
+                } else if !holdPaused {
+                    holdPaused = true
+                    feedback?.warning()
                 }
             case .back:
-                if flexion <= repHome { completeRep() }
-            }
-
-        case .holding:
-            feedback?.setTone(active: true, flexion: flexion)
-            watchQuality(flexion: flexion, velocity: velocity, leveler: leveler)
-            repPeak = max(repPeak, flexion)
-            if flexion < target - 4 {
-                phase = .reps
-                feedback?.warning()
-                show(.warning, "Hold slipped", "Now come back to your start.", "arrow.uturn.backward", duration: 2.5)
-            } else {
-                holdRemaining = max(0, holdRemaining - dt)
-                let whole = Int(ceil(holdRemaining))
-                if whole < lastSpokenHold && whole > 0 && whole <= 3 {
-                    lastSpokenHold = whole
-                    feedback?.tick(intensity: 0.9)
-                }
-                if holdRemaining <= 0 { completeHold() }
+                if flexion <= repHome { completeRep(held: !holdMissed) }
             }
         }
     }
 
-    /// Reached the goal zone: chime, and tell them to come back.
-    private func turnAround() {
+    /// Stopped in the goal zone (or reached the dot): the countdown starts.
+    private func startHold() {
+        repStage = .hold
+        holdRemaining = Self.holdSeconds
+        holdPaused = false
+        lastSpokenHold = Int(Self.holdSeconds)
+        settle = 0
+        feedback?.perfect()
+        feedback?.say("Hold")
+    }
+
+    /// Held long enough: chime, maybe a milestone, and tell them to come back.
+    private func completeHold() {
         repStage = .back
+        holdPaused = false
+        if repPeak >= target - 1 { targetHeld = true }
         feedback?.success()
-        if phase == .matchLastBest {
-            feedback?.say("This is where you were. Now back.")
+        let alreadyHave = max(lastBest, unlockedMilestone?.degrees ?? 0)
+        if !repCompensated && !repTooFast,
+           let milestone = joint.milestones.first(where: { $0.degrees > alreadyHave && $0.degrees <= repPeak }) {
+            unlockedMilestone = milestone
+            feedback?.say("Milestone unlocked. \(milestone.title). Now back.")
+            show(.milestone, "Unlocked: \(milestone.title)", "You now have the \(Int(milestone.degrees))° it takes.", milestone.symbol, duration: 5)
+        } else if phase == .matchLastBest {
+            feedback?.say("That's where you were last time. Now back.")
         } else {
-            feedback?.say("Good. Now back.")
+            feedback?.say("Now back.")
         }
     }
 
@@ -357,15 +396,23 @@ final class SessionEngine {
         }
     }
 
-    private func completeRep() {
-        let rep = Rep(peak: repPeak, compensated: repCompensated, tooFast: repTooFast)
+    private func completeRep(held: Bool) {
+        let rep = Rep(peak: repPeak, compensated: repCompensated, tooFast: repTooFast, held: held)
         reps.append(rep)
-        let wasMatch = phase == .matchLastBest
         beginRep()
-        if wasMatch { phase = .reps }
-        guard !rep.compensated && !rep.tooFast else { return }
+        guard rep.counts else {
+            // Rushing and a lifting thigh already said why; a skipped hold says it here.
+            if !rep.tooFast && !rep.compensated {
+                feedback?.warning()
+                feedback?.say("Hold at the top for it to count.")
+                show(.warning, "Hold for \(Int(Self.holdSeconds)) seconds", "Stop at the amber dot and hold still — then it counts.",
+                     "timer", duration: 3)
+            }
+            return
+        }
+        if phase == .matchLastBest { phase = .reps }
         let previous = max(sessionBest, lastBest)
-        if rep.peak > sessionBest { sessionBest = rep.peak }
+        sessionBest = max(sessionBest, rep.peak)
         if cleanReps == repGoal {
             feedback?.success()
             feedback?.say("\(repGoal). Set complete. Close the phone to save.")
@@ -374,25 +421,8 @@ final class SessionEngine {
         }
         if cleanReps < repGoal { feedback?.say("\(cleanReps)") }
         if rep.peak > previous + 0.5 && toast?.kind != .milestone {
-            let gain = rep.peak - lastBest
             show(.success, "New best · \(Int(rep.peak.rounded()))°",
-                 gain >= Clinical.measurementNoise ? "+\(Int(gain))° — beyond measurement error" : "+\(Int(gain.rounded()))° past your last best",
-                 "sparkles", duration: 2.6)
-        }
-    }
-
-    private func completeHold() {
-        targetHeld = true
-        phase = .reps           // still coming back: the rep counts when they return to the start
-        repStage = .back
-        sessionBest = max(sessionBest, hinge?.flexion ?? target)
-        feedback?.success()
-        if let milestone = joint.milestones.first(where: { $0.degrees > lastBest && $0.degrees <= max(sessionBest, target) }) {
-            unlockedMilestone = milestone
-            feedback?.say("Milestone unlocked. \(milestone.title). Now back.")
-            show(.milestone, "Unlocked: \(milestone.title)", "You now have the \(Int(milestone.degrees))° it takes.", milestone.symbol, duration: 5)
-        } else {
-            feedback?.say("Great hold. Now back.")
+                 "+\(Int((rep.peak - lastBest).rounded()))° past your last best", "sparkles", duration: 2.6)
         }
     }
 
@@ -403,7 +433,7 @@ final class SessionEngine {
     func finish(patient: Patient?, context: ModelContext) -> SessionSummary? {
         guard phase.isActive || phase == .ready && !reps.isEmpty else { return nil }
         feedback?.setTone(active: false, flexion: 0)
-        let clean = reps.filter { !$0.compensated && !$0.tooFast }
+        let clean = reps.filter(\.counts)
         let peak = max(sessionBest, clean.map(\.peak).max() ?? 0)
         let result = SessionSummary(start: startAngle, cleanReps: clean.count, repGoal: repGoal, peak: peak,
                                     previousBest: lastBest, reps: reps.count,
@@ -414,7 +444,7 @@ final class SessionEngine {
             let peaks = clean.map(\.peak).sorted()
             let session = RehabSession(date: .now, peakFlexion: peak.rounded(),
                                        comfortableMax: peaks.isEmpty ? peak : peaks[peaks.count / 2].rounded(),
-                                       extensionDeficit: max(0, (patient.extensionDeficit - 1)),
+                                       extensionDeficit: max(0, (patient.sortedSessions.last?.extensionDeficit ?? 1) - 1),
                                        reps: reps.count, compensatedReps: reps.filter(\.compensated).count,
                                        fastReps: reps.filter(\.tooFast).count, pain: 3,
                                        target: target, targetHeld: targetHeld)

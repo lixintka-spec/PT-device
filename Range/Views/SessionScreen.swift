@@ -23,7 +23,7 @@ struct SessionScreen: View {
                     SessionLiveView()
                 }
             }
-            .navigationTitle(session.phase.isActive ? session.exercise.title : "Session")
+            .navigationTitle(session.phase.isActive ? session.exercise.title : "Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if session.phase.isActive {
@@ -87,14 +87,14 @@ struct SessionReadyView: View {
                         Chip(text: "Day \(maria.dayToday) · \(maria.side.title) \(maria.joint.title.lowercased())", systemImage: "calendar", tint: RangeTheme.sky)
                         Text("Today's session")
                             .font(.largeTitle.bold())
-                        Text("Your comfortable max is **\(Int(maria.comfortableMax))°**. Let's aim for **\(Int(maria.adaptiveTarget))°** today.")
+                        Text("Last time you reached **\(Int(maria.bestBeforeToday))°**. Today, aim for **\(Int(maria.adaptiveTarget))°**.")
                             .font(.title3)
                             .foregroundStyle(RangeTheme.secondaryText)
                     }
                     VStack(alignment: .leading, spacing: 10) {
                         StepRow(number: 1, title: "Choose your start", detail: "Straight or bent — start wherever is comfortable. Hold still to lock it, or tap Start here.")
-                        StepRow(number: 2, title: "One rep = out and back", detail: "Bend to the amber dot, then come back to the blue dot (your start).")
-                        StepRow(number: 3, title: "Do \(session.repGoal) reps", detail: "Rep 1 aims for your last best (\(Int(session.lastBest))°), then \(Int(session.target))°. Hold it once for five seconds.")
+                        StepRow(number: 2, title: "Bend, hold, come back", detail: "Bend to the amber dot, hold still for \(Int(SessionEngine.holdSeconds)) seconds while the ring fills, then come back to the blue dot. That's one rep.")
+                        StepRow(number: 3, title: "Do \(session.repGoal) reps", detail: "Rep 1 aims for your last best (\(Int(session.lastBest))°), then \(Int(session.target))°.")
                         StepRow(number: 4, title: "Close the phone to save", detail: "Your recovery replays on the outside.")
                     }
                     .padding(18)
@@ -194,7 +194,7 @@ struct SessionLiveView: View {
             // Folded shut and not being dragged: there's no knee to measure yet.
             let waitingToOpen = hinge.status == .closed && !hinge.isManual && session.phase == .positioning
             let shownFlexion = waitingToOpen ? 0 : hinge.flexion
-            let holding = session.phase == .holding
+            let holding = session.phase.isExercising && session.repStage == .hold
             let accent: Color = holding ? RangeTheme.amber : (session.phase == .positioning ? RangeTheme.sky : RangeTheme.mint)
             let exercising = session.phase.isExercising && !(session.goalReached && session.repStage == .out)
             let goal: Double? = exercising ? session.currentGoal : nil
@@ -209,7 +209,8 @@ struct SessionLiveView: View {
                                           ghost: session.sessionBest > 0 ? session.sessionBest : nil,
                                           target: goal, accent: accent,
                                           zoneFrom: exercising && !comingBack ? session.repTurn : nil,
-                                          emphasizeStart: comingBack)
+                                          emphasizeStart: comingBack,
+                                          holdProgress: holding ? session.holdProgress : nil)
                     LimbPainter.draw(in: &ctx, pivot: pivot, length: L, flexion: shownFlexion, tilt: leveler.tilt,
                                      joint: session.exercise.joint,
                                      style: .init(deviceGlow: 0.9, kneeGlow: holding ? 0.8 : 0.35, glowColor: accent))
@@ -248,22 +249,35 @@ struct SessionLiveView: View {
 
                 // Trailing: the number and one instruction.
                 VStack(alignment: stacked ? .leading : .trailing, spacing: 6) {
-                    Text(waitingToOpen ? "Open the phone" : session.headline)
-                        .font(.title2.weight(.semibold))
-                        .multilineTextAlignment(stacked ? .leading : .trailing)
-                        .foregroundStyle(holding ? RangeTheme.amber : .white)
-                        .contentTransition(.interpolate)
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text(waitingToOpen ? "—" : "\(Int(hinge.flexion.rounded()))")
-                            .font(RangeTheme.numeral(onCrease ? 112 : 72, weight: .bold))
-                            .contentTransition(.numericText(value: hinge.flexion))
-                        if !waitingToOpen {
-                            Text("°").font(RangeTheme.numeral(onCrease ? 48 : 36, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
-                        }
+                    // Every rep, the same three moves — the current one lit.
+                    if exercising {
+                        RepLoopIndicator(stage: session.repStage, holdMissed: session.holdMissed, large: onCrease)
+                            .padding(.bottom, 6)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .foregroundStyle(holding ? RangeTheme.amber : .white)
+                    Text(waitingToOpen ? "Open the phone" : session.headline)
+                        .font(holding ? .largeTitle.weight(.bold) : .title2.weight(.semibold))
+                        .multilineTextAlignment(stacked ? .leading : .trailing)
+                        .foregroundStyle(holding ? (session.holdPaused ? RangeTheme.coral : RangeTheme.amber) : .white)
+                        .contentTransition(.interpolate)
+                    if holding {
+                        HoldCountdown(remaining: session.holdRemaining, progress: session.holdProgress,
+                                      paused: session.holdPaused, degrees: hinge.flexion,
+                                      diameter: onCrease ? 190 : 120)
+                            .padding(.vertical, 4)
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    } else {
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text(waitingToOpen ? "—" : "\(Int(hinge.flexion.rounded()))")
+                                .font(RangeTheme.numeral(onCrease ? 112 : 72, weight: .bold))
+                                .contentTransition(.numericText(value: hinge.flexion))
+                            if !waitingToOpen {
+                                Text("°").font(RangeTheme.numeral(onCrease ? 48 : 36, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
+                            }
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .foregroundStyle(.white)
+                    }
                     Text(waitingToOpen ? "Drape it over your knee and open it — or drag the leg to try"
                          : session.detail(flexion: hinge.flexion, isLevel: leveler.isLevel))
                         .font(onCrease ? .title3 : .subheadline)
@@ -280,9 +294,6 @@ struct SessionLiveView: View {
                         .foregroundStyle(.black)
                         .padding(.top, 8)
                     }
-                    if holding {
-                        HoldRing(remaining: session.holdRemaining).frame(width: 64, height: 64).padding(.top, 6)
-                    }
                 }
                 .frame(width: textWidth, alignment: stacked ? .leading : .trailing)
                 .padding(.top, 20 + layout.cameraInset(for: CGRect(x: size.width - 400, y: 0, width: 400, height: 220)))
@@ -290,6 +301,7 @@ struct SessionLiveView: View {
                 .padding(.trailing, stacked ? 0 : 28)
                 .frame(maxWidth: .infinity, alignment: stacked ? .leading : .trailing)
                 .animation(.spring(duration: 0.35), value: session.phase)
+                .animation(.spring(duration: 0.35), value: session.repStage)
 
                 // Big moments only (new best, slow down, milestone).
                 if let toast = session.toast, toast.kind != .info {
@@ -387,29 +399,11 @@ struct RepStrip: View {
     }
 }
 
-struct HoldRing: View {
-    var remaining: Double
-    var body: some View {
-        ZStack {
-            Circle().stroke(RangeTheme.amber.opacity(0.2), lineWidth: 7)
-            Circle()
-                .trim(from: 0, to: remaining / 5)
-                .stroke(RangeTheme.amber, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Text("\(Int(ceil(remaining)))")
-                .font(RangeTheme.numeral(22, weight: .bold))
-                .foregroundStyle(RangeTheme.amber)
-                .contentTransition(.numericText())
-        }
-        .animation(.linear(duration: 0.1), value: remaining)
-    }
-}
-
 struct ToastView: View {
     var toast: CoachToast
     var tint: Color {
         switch toast.kind {
-        case .info, .tip: RangeTheme.sky
+        case .info: RangeTheme.sky
         case .success: RangeTheme.mint
         case .warning: RangeTheme.coral
         case .milestone: RangeTheme.amber
@@ -494,9 +488,9 @@ struct SummaryHeadline: View {
                         .foregroundStyle(RangeTheme.mint)
                 }
             }
-            Text(summary.beyondNoise ? "Beyond measurement error — real progress." : "Solid session. Consistency builds range.")
+            Text(summary.isNewBest ? "New personal best." : "Solid session. Consistency builds range.")
                 .font(.headline)
-                .foregroundStyle(summary.beyondNoise ? RangeTheme.mint : RangeTheme.secondaryText)
+                .foregroundStyle(summary.isNewBest ? RangeTheme.mint : RangeTheme.secondaryText)
             HStack {
                 Chip(text: "\(Int(summary.start))° → \(Int(summary.peak.rounded()))°", systemImage: "flag.fill", tint: RangeTheme.sky)
                 Chip(text: "\(summary.cleanReps) of \(summary.repGoal) reps", systemImage: "repeat",

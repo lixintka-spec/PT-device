@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Realistic demo caseload: Maria (the patient in the demo) plus a small clinic panel.
+/// Demo data: Maria, day 14 after a knee replacement, with two weeks of sessions.
 enum SeedData {
     @MainActor
     static func seedIfNeeded(_ context: ModelContext) {
@@ -47,50 +47,7 @@ enum SeedData {
             context.insert(session)
         }
 
-        // James — week 6 plateau: the stiffness alert.
-        addPatient(context, &rng, name: "James Okafor", age: 58, procedure: "Total knee replacement",
-                   joint: .knee, side: .left, day: 43,
-                   curve: [(1, 60), (7, 72), (14, 80), (21, 84), (28, 85), (35, 85), (42, 86)],
-                   skip: [9, 30], pain: 4)
-        // Tom — elbow fracture with a pain spike yesterday.
-        addPatient(context, &rng, name: "Tom Becker", age: 45, procedure: "Elbow fracture repair",
-                   joint: .elbow, side: .left, day: 30,
-                   curve: [(1, 55), (10, 80), (20, 98), (28, 108), (29, 97)],
-                   skip: [4, 15], pain: 3, lastPain: 8)
-        // Lin — on track but missing days (RTM at risk).
-        addPatient(context, &rng, name: "Lin Chen", age: 62, procedure: "Total knee replacement",
-                   joint: .knee, side: .left, day: 25,
-                   curve: [(1, 66), (7, 82), (14, 92), (19, 97)],
-                   skip: [3, 8, 11, 20, 21, 22, 23, 24], pain: 3)
-        // Priya — textbook recovery.
-        addPatient(context, &rng, name: "Priya Shah", age: 71, procedure: "Total knee replacement",
-                   joint: .knee, side: .right, day: 10,
-                   curve: [(1, 70), (5, 80), (9, 88)],
-                   skip: [], pain: 3)
         try? context.save()
-    }
-
-    @MainActor
-    private static func addPatient(_ context: ModelContext, _ rng: inout SeededRandom, name: String, age: Int,
-                                   procedure: String, joint: Joint, side: Side, day: Int,
-                                   curve: [(Int, Double)], skip: Set<Int>, pain: Int, lastPain: Int? = nil) {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: .now)
-        let patient = Patient(name: name, age: age, procedure: procedure, joint: joint, side: side,
-                              surgeryDate: cal.date(byAdding: .day, value: -day, to: today)!)
-        context.insert(patient)
-        let lastDay = curve.last!.0
-        for d in 1...lastDay where !skip.contains(d) {
-            let peak = interpolate(curve, Double(d)) + rng.next(in: -1.0...1.0)
-            let session = RehabSession(
-                date: cal.date(byAdding: .hour, value: 9, to: cal.date(byAdding: .day, value: -(day - d), to: today)!)!,
-                peakFlexion: peak.rounded(), comfortableMax: (peak - 2).rounded(),
-                extensionDeficit: max(2, 10 - Double(d) * 0.3).rounded(),
-                reps: Int(rng.next(in: 8...14)), pain: d == lastDay ? (lastPain ?? pain) : pain,
-                target: (peak + 4).rounded(), targetHeld: true)
-            session.patient = patient
-            context.insert(session)
-        }
     }
 
     static func interpolate(_ points: [(Int, Double)], _ x: Double) -> Double {

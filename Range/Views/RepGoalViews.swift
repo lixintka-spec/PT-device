@@ -3,7 +3,7 @@ import SwiftUI
 /// Choose how many reps to do: one number, a minus and a plus.
 struct RepGoalPicker: View {
     @Binding var goal: Int
-    var note: String? = "Dr. Kim suggests 10"
+    var note: String? = "Each rep: bend, hold \(Int(SessionEngine.holdSeconds)) s, come back"
 
     var body: some View {
         HStack(spacing: 12) {
@@ -89,5 +89,93 @@ struct RepProgress: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The three moves of every rep, with the current one lit: Bend → Hold 3s → Back.
+struct RepLoopIndicator: View {
+    var stage: SessionEngine.RepStage
+    var holdMissed = false
+    var large = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            step(.out, "Bend", tint: RangeTheme.amber)
+            arrow
+            step(.hold, "Hold \(Int(SessionEngine.holdSeconds))s", tint: RangeTheme.amber, missed: holdMissed)
+            arrow
+            step(.back, "Back", tint: RangeTheme.sky)
+        }
+        .font(large ? .headline : .subheadline.weight(.semibold))
+        .animation(.snappy, value: stage)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rep: bend, hold, back")
+        .accessibilityValue(stage == .out ? "Bend" : (stage == .hold ? "Hold" : "Back"))
+    }
+
+    private var arrow: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(RangeTheme.tertiaryText)
+    }
+
+    private func step(_ s: SessionEngine.RepStage, _ title: String, tint base: Color, missed: Bool = false) -> some View {
+        let active = s == stage
+        let done = s < stage
+        let tint = done && missed ? RangeTheme.coral : base
+        return HStack(spacing: 4) {
+            if done { Image(systemName: missed ? "xmark" : "checkmark") }
+            Text(title)
+        }
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, large ? 14 : 10)
+        .padding(.vertical, large ? 8 : 6)
+        .foregroundStyle(active ? Color.black : (done ? tint : RangeTheme.secondaryText))
+        .background(active ? tint : tint.opacity(done ? 0.14 : 0), in: .capsule)
+        .overlay(Capsule().strokeBorder(Color.white.opacity(active || done ? 0 : 0.18)))
+    }
+}
+
+/// The hold, impossible to miss: a ring that fills while the knee stays at the top.
+struct HoldCountdown: View {
+    var remaining: Double
+    var progress: Double
+    var paused: Bool
+    var degrees: Double
+    var diameter: CGFloat
+
+    var body: some View {
+        let tint = paused ? RangeTheme.coral : RangeTheme.amber
+        let line = diameter * 0.075
+        ZStack {
+            Circle().fill(tint.opacity(0.10))
+            Circle().stroke(tint.opacity(0.22), lineWidth: line)
+            Circle()
+                .trim(from: 0, to: max(0.001, progress))
+                .stroke(tint, style: StrokeStyle(lineWidth: line, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .shadow(color: tint.opacity(0.6), radius: 12)
+            VStack(spacing: 0) {
+                if paused {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: diameter * 0.26, weight: .bold))
+                        .padding(.vertical, diameter * 0.06)
+                } else {
+                    Text("\(Int(ceil(remaining)))")
+                        .font(RangeTheme.numeral(diameter * 0.42, weight: .bold))
+                        .contentTransition(.numericText(countsDown: true))
+                }
+                Text("\(Int(degrees.rounded()))°")
+                    .font(RangeTheme.numeral(diameter * 0.11, weight: .semibold))
+                    .foregroundStyle(RangeTheme.secondaryText)
+            }
+            .foregroundStyle(tint)
+        }
+        .frame(width: diameter, height: diameter)
+        .animation(.linear(duration: 0.1), value: progress)
+        .animation(.snappy, value: Int(ceil(remaining)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(paused ? "Hold paused" : "Hold, \(Int(ceil(remaining))) seconds left")
     }
 }

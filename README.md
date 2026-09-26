@@ -21,8 +21,8 @@ Built for **Bitrig Hacks: iPhone Duo Edition** (YC, Sept 26 2026). SwiftUI, iOS 
 5. No scriptable hinge (e.g. Bitrig)? **… menu → Demo Controls → Run Full Demo (Autopilot)**,
    or launch with `-autopilot`.
 
-Launch arguments: `-resetDemo` (fresh seeded data), `-startSession`, `-tab today|session|progress|care`,
-`-unlockClinic` (demo entitlement), `-autopilot`, `-logHinge` (prints every hinge update).
+Launch arguments: `-resetDemo` (fresh seeded data), `-startSession`, `-tab home|exercise|progress`,
+`-repGoal N`, `-autopilot`, `-logHinge` (prints every hinge update).
 
 Regenerate the project after adding files: `xcodegen generate` (see `project.yml`).
 
@@ -30,48 +30,32 @@ Regenerate the project after adding files: `xcodegen generate` (see `project.yml
 
 | Moment | What happens | iPhone Duo API |
 |---|---|---|
-| Phone closed | Today card on the outer display: day 14, last best 84°, target 89°, and **how many reps** (− 10 +, remembered) | Size classes, vertical bars |
+| Phone closed | **Home** card on the outer display: day 14, last best 84°, target 89°, and **how many reps** (− 10 +, remembered) | Size classes, vertical bars |
 | Open | **She chooses where to start** — straight or bent. Hold still (or tap *Start here*) and the start locks; the **leveler** checks the thigh is flat. Reps are measured from her start | `CMMotionManager.deviceMotionBody` (`CMBodyIdentifiable`), hinge angle |
 | Fold | Protractor pivots **exactly on the crease**; leg bends in sync | `onHingeChange`, `reservedRegions(kind: .division)` |
-| Match last best | "Fold to 84° — this is where you were." The hardware is the progress meter | Hinge angle |
-| Reps | **Ghost range** arc to beat, parking-sensor ticks toward the target, rising tone | Hinge velocity |
+| Every rep | **Bend → Hold 3s → Back**, always shown as three pills with the current one lit. Bend to the amber dot, stop and a big countdown ring fills (3‑2‑1, spoken), then "Now back to 40°" to the blue start dot. Sag out of the zone and the hold pauses; skip it and the rep doesn't count | Hinge angle |
+| Match last best | Rep 1 aims at 84°: "That's where you were last time." The hardware is the progress meter | Hinge angle |
+| Reps | **Ghost range** arc to beat, parking-sensor ticks toward the target, rising tone; dots fill per clean rep, the coach counts aloud, "Set complete" at the goal | Hinge velocity |
 | Rushed rep | "Slow down — controlled movement"; it doesn't count toward the rep goal | Angular velocity |
-| Reps | **One rep = out and back**: bend to the amber dot ("Bend to 89°"), then "Now back to 40°" to the blue start dot. Dots fill per clean rep, the coach counts aloud, "Set complete" at the goal | Hinge angle |
-| Target | "Perfect. Hold." buzz + 5-second ring → milestone unlocked (Climb stairs) | Core Haptics + audio mirror |
+| Milestone | Holding past 85° unlocks **Climb stairs** | Core Haptics + audio mirror |
 | Close the phone | **Close-to-save**; recovery replay plays on the outer display (Day 1 → today) | Hinge status + angle |
 
-Clinical rules baked in: adaptive target = median of last 3 peaks + 5° (+2° if pain ≥ 5),
-±5° measurement-noise band (only real gains are celebrated), compensation detection (thigh lifts),
-extension deficit, functional milestone ladder, typical post-TKA recovery band.
+Under the hood: adaptive target = median of last 3 peaks + 5° (+2° if it hurt last time),
+compensation detection (thigh lifts), functional milestone ladder.
 
-## Range Clinic (therapists)
-
-Risk-sorted caseload (stiffness plateau, pain spike, missed days), live session badge, per-patient
-chart, **RTM billing tracker** (16 data days / 30), SOAP progress note drafted with Apple's
-**on-device Foundation Models** (template fallback), and a device-only **camera assessment** that
-puts an interactive, patient-facing pain scale on the outer display via `CameraCaptureAccessory`.
-
-## Monetization — RevenueCat
-
-Range Clinic is sold through **RevenueCat**: offerings, `PaywallView` (RevenueCatUI),
-purchases, restore, entitlement checks (`clinic`), `customerInfoStream`, and `CustomerCenterView`
-for subscription management. Everything else uses the best native tool: SwiftData (storage),
-Swift Charts, Core Haptics, AVFoundation (tones/voice), Core Motion, Foundation Models.
-
-To go live, paste a key in `Range/Store/Secrets.swift`:
-1. RevenueCat dashboard → new project → **Test Store** (works in the Simulator, no App Store Connect).
-2. Product `range_clinic_monthly` → entitlement **`clinic`** → offering `default` (attach a Paywall).
-3. Copy the public SDK key (`test_…`) into `Secrets.revenueCatAPIKey`.
-
-With no key, the paywall runs in clearly labeled **demo mode**.
+The demo build is patient-only: no clinic dashboard or paywall. RevenueCat is still linked
+(`Range/Store/ProStore.swift`, no key, no screens) so a paywall can come back later.
+Everything else uses native frameworks: SwiftData, Swift Charts, Core Haptics, AVFoundation
+(tones/voice), Core Motion.
 
 ## Design notes (Apple's iPhone Duo guidance)
 
 - Standard `TabView` + toolbars → system vertical bars on the side; every toolbar item has a
   title + symbol; `visibilityPriority` keeps **Finish** visible, secondary actions go to
   `ToolbarOverflowMenu`.
-- `ArrangementView` (`.split`) for Today, Progress and session setup; navigation kept outside it.
+- `ArrangementView` (`.split`) for Home, Progress and session setup; navigation kept outside it.
+- Tabs say what they hold: **Home** (house), **Exercise** (stretching figure), **Progress** (chart).
 - Custom canvas uses `ReservedRegion` for the fold (pivot on the crease) and camera occlusion.
 - Same hierarchy and functions on both displays; nothing tied to a single pose.
-- Simulator honesty: no camera, haptics or motion sensors — haptics are mirrored in sound and
-  visuals, the leveler shows "Simulated sensor", camera assessment runs on device.
+- Simulator honesty: no haptics or motion sensors — haptics are mirrored in sound and
+  visuals, and the leveler shows "Simulated sensor".

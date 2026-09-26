@@ -37,16 +37,15 @@ struct RangeApp: App {
                     for _ in 0..<20 where app.primaryPatient == nil { try? await Task.sleep(for: .milliseconds(100)) }
                     if ProcessInfo.processInfo.arguments.contains("-startSession"), let p = app.primaryPatient {
                         session.configure(for: p)
-                        app.tab = .session
+                        app.tab = .exercise
                         session.begin()
                     }
                     let args = ProcessInfo.processInfo.arguments
                     if let i = args.firstIndex(of: "-tab"), i + 1 < args.count {
-                        app.tab = ["today": .today, "session": .session, "progress": .progress, "care": .care][args[i + 1]] ?? .today
+                        app.tab = ["home": .home, "today": .home, "exercise": .exercise, "session": .exercise,
+                                   "progress": .progress][args[i + 1]] ?? .home
                     }
-                    if args.contains("-unlockClinic") { await store.demoUnlock() }
                     if let i = args.firstIndex(of: "-repGoal"), i + 1 < args.count, let n = Int(args[i + 1]) { session.repGoal = min(30, max(1, n)) }
-                    if args.contains("-showPaywall") { app.showPaywall = true }
                     if ProcessInfo.processInfo.arguments.contains("-autopilot") {
                         try? await Task.sleep(for: .seconds(1))
                         app.runAutopilot()

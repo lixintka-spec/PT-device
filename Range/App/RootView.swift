@@ -11,10 +11,9 @@ struct RootView: View {
     var body: some View {
         @Bindable var app = app
         TabView(selection: $app.tab) {
-            Tab("Today", systemImage: "sun.max.fill", value: AppState.Tab.today) { TodayView() }
-            Tab("Session", systemImage: "gauge.with.needle.fill", value: AppState.Tab.session) { SessionScreen() }
+            Tab("Home", systemImage: "house.fill", value: AppState.Tab.home) { TodayView() }
+            Tab("Exercise", systemImage: "figure.flexibility", value: AppState.Tab.exercise) { SessionScreen() }
             Tab("Progress", systemImage: "chart.line.uptrend.xyaxis", value: AppState.Tab.progress) { ProgressScreen() }
-            Tab("Care Team", systemImage: "stethoscope", value: AppState.Tab.care) { CareTeamScreen() }
         }
         .tint(RangeTheme.mint)
         // iPhone Duo: live hinge angle + status drive the whole experience.
@@ -33,7 +32,6 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: app.showOuterSummary)
         .sheet(isPresented: $app.showPlacementGuide) { PlacementGuideView() }
         .sheet(isPresented: $app.showDemoControls) { DemoControlsView() }
-        .sheet(isPresented: $app.showPaywall) { PaywallScreen() }
         .onAppear {
             app.primaryPatient = primary.first
             if let maria = primary.first, session.phase == .ready { session.configure(for: maria) }
@@ -48,7 +46,7 @@ struct RootView: View {
     private func handleHinge(closed: Bool) {
         if closed {
             // Only a session that has started measuring gets saved; positioning just waits.
-            if [.matchLastBest, .reps, .holding].contains(session.phase) {
+            if session.phase.isExercising {
                 if let s = session.finish(patient: primary.first, context: context) {
                     app.lastSummary = s
                     app.showOuterSummary = true
@@ -72,15 +70,15 @@ struct OuterSummaryView: View {
             RangeTheme.backdrop
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Chip(text: "Saved · sent to Dr. Kim", systemImage: "checkmark.seal.fill", tint: RangeTheme.mint)
+                    Chip(text: "Saved", systemImage: "checkmark.seal.fill", tint: RangeTheme.mint)
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(Int(summary.peak.rounded()))°").font(RangeTheme.numeral(52, weight: .bold))
                         if summary.gain > 0.5 {
                             Text("+\(Int(summary.gain.rounded()))°").font(RangeTheme.numeral(24, weight: .bold)).foregroundStyle(RangeTheme.mint)
                         }
                     }
-                    if summary.beyondNoise {
-                        Text("Beyond measurement error — real progress.").font(.subheadline.weight(.semibold)).foregroundStyle(RangeTheme.mint)
+                    if summary.isNewBest {
+                        Text("New personal best.").font(.subheadline.weight(.semibold)).foregroundStyle(RangeTheme.mint)
                     }
                     Label("Stretched from \(Int(summary.start))° to \(Int(summary.peak.rounded()))°", systemImage: "flag.fill")
                         .font(.subheadline)
