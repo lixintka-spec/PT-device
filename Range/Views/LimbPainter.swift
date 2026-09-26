@@ -201,6 +201,22 @@ enum LimbPainter {
         }
     }
 
+    /// Thigh tilt for a touch at `point` (0 = level; positive = hip end raised).
+    static func thighTilt(at point: CGPoint, pivot: CGPoint) -> Double {
+        let theta = atan2(pivot.y - point.y, point.x - pivot.x) * 180 / .pi
+        var tilt = 180 - theta
+        if tilt > 180 { tilt -= 360 }
+        return min(30, max(-30, tilt))
+    }
+
+    /// Distance from a point to a segment, for deciding which part of the leg was grabbed.
+    static func distance(_ p: CGPoint, toSegmentFrom a: CGPoint, to b: CGPoint) -> CGFloat {
+        let dx = b.x - a.x, dy = b.y - a.y
+        let len2 = max(0.0001, dx * dx + dy * dy)
+        let t = max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2))
+        return hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
+    }
+
     /// Inverse of `jointPoint`: which flexion a touch at `point` corresponds to.
     static func flexion(at point: CGPoint, pivot: CGPoint, tilt: Double) -> Double {
         let theta = atan2(pivot.y - point.y, point.x - pivot.x) * 180 / .pi

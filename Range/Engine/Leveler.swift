@@ -21,7 +21,23 @@ final class Leveler {
     private let manager = CMMotionManager()
     private var running = false
 
-    var tilt: Double { isSimulated ? simulatedTilt : measuredTilt }
+    /// Set by dragging the thigh on screen.
+    private(set) var isManual = false
+    private var manualTilt: Double = 0
+
+    var tilt: Double { isManual ? manualTilt : (isSimulated ? simulatedTilt : measuredTilt) }
+
+    /// Touch control: tilt the thigh directly (degrees; positive = hip end raised).
+    func setManual(tilt: Double) {
+        isManual = true
+        manualTilt = min(30, max(-30, tilt))
+    }
+
+    /// Hand the leveler back to the motion sensor (or the simulated sensor).
+    func useSensor() {
+        isManual = false
+        if isSimulated { simulatedTilt = manualTilt }
+    }
     var isLevel: Bool { abs(tilt) <= 5 }
     var isDrifting: Bool { abs(tilt) > 10 }
 
@@ -52,7 +68,7 @@ final class Leveler {
 
     /// Simulated patient settling into position.
     func settleStep(dt: Double) {
-        guard isSimulated, autoSettle else { return }
+        guard isSimulated, autoSettle, !isManual else { return }
         simulatedTilt += (0 - simulatedTilt) * (1 - exp(-dt * 1.1))
         if abs(simulatedTilt) < 0.05 { simulatedTilt = 0 }
     }

@@ -240,7 +240,7 @@ final class SessionEngine {
             leveler.settleStep(dt: dt)
             feedback?.setTone(active: false, flexion: flexion)
             // Any angle works as a start — it just has to be steady and level.
-            let still = abs(velocity) < 4 && hinge.status != .closed
+            let still = abs(velocity) < 4 && (hinge.status != .closed || hinge.isManual)
             if still && leveler.isLevel {
                 positionProgress = min(1, positionProgress + dt / 3)
                 if positionProgress >= 1 { lockStart(at: flexion) }

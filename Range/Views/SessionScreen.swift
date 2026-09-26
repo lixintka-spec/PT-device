@@ -40,8 +40,10 @@ struct SessionScreen: View {
                     Button { app.isMuted.toggle() } label: {
                         Label(app.isMuted ? "Unmute" : "Mute", systemImage: app.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     }
-                    if hinge.isManual {
-                        Button { hinge.useHardware() } label: { Label("Use Hinge", systemImage: "rectangle.portrait.on.rectangle.portrait") }
+                    if hinge.isManual || leveler.isManual {
+                        Button { hinge.useHardware(); leveler.useSensor() } label: {
+                            Label("Use Hinge & Sensors", systemImage: "rectangle.portrait.on.rectangle.portrait")
+                        }
                     }
                     Button { app.showDemoControls = true } label: { Label("Demo Controls", systemImage: "slider.horizontal.3") }
                     if session.phase == .positioning {
@@ -156,6 +158,8 @@ struct SessionLiveView: View {
     @Environment(SessionEngine.self) private var session
     @Environment(HingeEngine.self) private var hinge
     @Environment(Leveler.self) private var leveler
+    private enum Grab { case thigh, lowerLeg }
+    @State private var grab: Grab?
 
     var body: some View {
         GeometryReader { proxy in
@@ -164,13 +168,19 @@ struct SessionLiveView: View {
             // Inner display: the knee sits on the physical crease. Outer display (no fold):
             // leg on the left, text on the right, nothing overlapping.
             let onCrease = layout.hasFold
-            let pivotY = layout.creaseY.map { min(size.height * 0.6, max(size.height * 0.3, $0)) } ?? size.height * (onCrease ? 0.46 : 0.36)
-            let pivot = CGPoint(x: onCrease ? layout.creaseX : size.width * 0.34, y: pivotY)
+            // Narrow portrait screen (outer display held upright): text on top, leg below.
+            let stacked = !onCrease && size.height > size.width
+            let pivotY = layout.creaseY.map { min(size.height * 0.6, max(size.height * 0.3, $0)) }
+                ?? size.height * (onCrease ? 0.46 : (stacked ? 0.58 : 0.36))
+            let pivot = CGPoint(x: onCrease ? layout.creaseX : size.width * (stacked ? 0.56 : 0.34), y: pivotY)
             let L = onCrease
                 ? min(min(layout.creaseX, size.width - layout.creaseX) * 0.62, size.height * 0.36)
-                : min(size.width * 0.22, size.height * 0.34)
+                : (stacked ? min(size.width * 0.30, size.height * 0.2) : min(size.width * 0.22, size.height * 0.34))
             let radius = min(L * 1.02, size.height - pivotY - (onCrease ? 56 : 36))
-            let textWidth = onCrease ? min(380, max(240, layout.trailingWidth - 40)) : size.width * 0.38
+            let textWidth = onCrease ? min(380, max(240, layout.trailingWidth - 40)) : (stacked ? size.width - 48 : size.width * 0.38)
+            // Folded shut and not being dragged: there's no knee to measure yet.
+            let waitingToOpen = hinge.status == .closed && !hinge.isManual && session.phase == .positioning
+            let shownFlexion = waitingToOpen ? 0 : hinge.flexion
             let holding = session.phase == .holding
             let accent: Color = holding ? RangeTheme.amber : (session.phase == .positioning ? RangeTheme.sky : RangeTheme.mint)
             let goal: Double? = switch session.phase {
@@ -183,11 +193,11 @@ struct SessionLiveView: View {
                 // The leg — drag it to test.
                 Canvas { ctx, _ in
                     LimbPainter.drawGuide(in: &ctx, pivot: pivot, radius: radius,
-                                          flexion: hinge.flexion, tilt: leveler.tilt,
+                                          flexion: shownFlexion, tilt: leveler.tilt,
                                           start: session.hasStart ? session.startAngle : nil,
                                           ghost: session.sessionBest > 0 ? session.sessionBest : nil,
                                           target: goal, accent: accent)
-                    LimbPainter.draw(in: &ctx, pivot: pivot, length: L, flexion: hinge.flexion, tilt: leveler.tilt,
+                    LimbPainter.draw(in: &ctx, pivot: pivot, length: L, flexion: shownFlexion, tilt: leveler.tilt,
                                      joint: session.exercise.joint,
                                      style: .init(deviceGlow: 0.9, kneeGlow: holding ? 0.8 : 0.35, glowColor: accent))
                 }
@@ -195,37 +205,59 @@ struct SessionLiveView: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
-                            hinge.setManual(flexion: LimbPainter.flexion(at: value.location, pivot: pivot, tilt: leveler.tilt))
+                            if grab == nil {
+                                // Whichever segment you touch first is the one you move.
+                                let hip = LimbPainter.point(pivot, 180 - leveler.tilt, L * 1.35)
+                                let ankle = LimbPainter.jointPoint(pivot, flexion: hinge.flexion, tilt: leveler.tilt, L * 1.1)
+                                let toThigh = LimbPainter.distance(value.startLocation, toSegmentFrom: pivot, to: hip)
+                                let toShin = LimbPainter.distance(value.startLocation, toSegmentFrom: pivot, to: ankle)
+                                let nearKnee = hypot(value.startLocation.x - pivot.x, value.startLocation.y - pivot.y) < L * 0.18
+                                grab = (toThigh < toShin && !nearKnee) ? .thigh : .lowerLeg
+                            }
+                            switch grab {
+                            case .thigh:
+                                leveler.setManual(tilt: LimbPainter.thighTilt(at: value.location, pivot: pivot))
+                            default:
+                                hinge.setManual(flexion: LimbPainter.flexion(at: value.location, pivot: pivot, tilt: leveler.tilt))
+                            }
                         }
+                        .onEnded { _ in grab = nil }
                 )
-                .accessibilityLabel("Knee at \(Int(hinge.flexion.rounded())) degrees")
-                .accessibilityHint("Drag to change the angle")
+                .accessibilityLabel("Knee at \(Int(hinge.flexion.rounded())) degrees, thigh \(Int(abs(leveler.tilt).rounded())) degrees off level")
+                .accessibilityHint("Drag the lower leg to bend the knee, or the thigh to tilt it")
 
                 // Leading: only what needs attention.
                 StatusCorner()
-                    .frame(width: onCrease ? min(300, max(200, layout.leadingWidth - 48)) : size.width * 0.4, alignment: .leading)
+                    .frame(width: onCrease ? min(300, max(200, layout.leadingWidth - 48)) : (stacked ? size.width - 48 : size.width * 0.4),
+                           alignment: .leading)
                     .padding(.leading, 24)
-                    .padding(.top, 20)
+                    .padding(.top, stacked ? max(0, size.height - 190) : 20)
 
                 // Trailing: the number and one instruction.
-                VStack(alignment: .trailing, spacing: 6) {
-                    Text(session.headline)
+                VStack(alignment: stacked ? .leading : .trailing, spacing: 6) {
+                    Text(waitingToOpen ? "Open the phone" : session.headline)
                         .font(.title2.weight(.semibold))
+                        .multilineTextAlignment(stacked ? .leading : .trailing)
                         .foregroundStyle(holding ? RangeTheme.amber : .white)
                         .contentTransition(.interpolate)
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text("\(Int(hinge.flexion.rounded()))")
-                            .font(RangeTheme.numeral(onCrease ? 112 : 64, weight: .bold))
+                        Text(waitingToOpen ? "—" : "\(Int(hinge.flexion.rounded()))")
+                            .font(RangeTheme.numeral(onCrease ? 112 : 72, weight: .bold))
                             .contentTransition(.numericText(value: hinge.flexion))
-                        Text("°").font(RangeTheme.numeral(48, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
+                        if !waitingToOpen {
+                            Text("°").font(RangeTheme.numeral(onCrease ? 48 : 36, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
+                        }
                     }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .foregroundStyle(holding ? RangeTheme.amber : .white)
-                    Text(session.detail(flexion: hinge.flexion, isLevel: leveler.isLevel))
+                    Text(waitingToOpen ? "Drape it over your knee and open it — or drag the leg to try"
+                         : session.detail(flexion: hinge.flexion, isLevel: leveler.isLevel))
                         .font(onCrease ? .title3 : .subheadline)
-                        .multilineTextAlignment(.trailing)
+                        .multilineTextAlignment(stacked ? .leading : .trailing)
                         .foregroundStyle(RangeTheme.secondaryText)
                         .contentTransition(.interpolate)
-                    if session.phase == .positioning {
+                    if session.phase == .positioning && !waitingToOpen {
                         Button { session.lockStart() } label: {
                             Label("Start here", systemImage: "flag.fill").font(.headline).padding(.horizontal, 8)
                         }
@@ -238,10 +270,11 @@ struct SessionLiveView: View {
                         HoldRing(remaining: session.holdRemaining).frame(width: 64, height: 64).padding(.top, 6)
                     }
                 }
-                .frame(width: textWidth, alignment: .trailing)
+                .frame(width: textWidth, alignment: stacked ? .leading : .trailing)
                 .padding(.top, 20 + layout.cameraInset(for: CGRect(x: size.width - 400, y: 0, width: 400, height: 220)))
-                .padding(.trailing, 28)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, stacked ? 24 : 0)
+                .padding(.trailing, stacked ? 0 : 28)
+                .frame(maxWidth: .infinity, alignment: stacked ? .leading : .trailing)
                 .animation(.spring(duration: 0.35), value: session.phase)
 
                 // Big moments only (new best, slow down, milestone).
@@ -253,8 +286,8 @@ struct SessionLiveView: View {
                         .id(toast.id)
                 }
 
-                if hinge.isManual {
-                    ManualControlPill { hinge.useHardware() }
+                if hinge.isManual || leveler.isManual {
+                    ManualControlPill { hinge.useHardware(); leveler.useSensor() }
                         .position(x: onCrease ? layout.creaseX + max(layout.trailingWidth, 280) / 2 : size.width - 120,
                                   y: size.height - 36)
                 }
