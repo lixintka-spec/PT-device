@@ -11,8 +11,9 @@ enum SeedData {
 
     @MainActor
     static func reset(_ context: ModelContext) {
-        try? context.delete(model: RehabSession.self)
-        try? context.delete(model: Patient.self)
+        // Delete object by object: batch deletes trip over the patient ↔ session inverse.
+        for patient in (try? context.fetch(FetchDescriptor<Patient>())) ?? [] { context.delete(patient) }
+        for session in (try? context.fetch(FetchDescriptor<RehabSession>())) ?? [] { context.delete(session) }
         try? context.save()
         seed(context)
     }

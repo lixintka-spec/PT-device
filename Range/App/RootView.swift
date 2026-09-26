@@ -85,6 +85,9 @@ struct OuterSummaryView: View {
                     Label("Stretched from \(Int(summary.start))° to \(Int(summary.peak.rounded()))°", systemImage: "flag.fill")
                         .font(.subheadline)
                         .foregroundStyle(RangeTheme.sky)
+                    Label("\(summary.cleanReps) of \(summary.repGoal) reps", systemImage: "repeat")
+                        .font(.subheadline)
+                        .foregroundStyle(summary.cleanReps >= summary.repGoal ? RangeTheme.mint : RangeTheme.secondaryText)
                     if let m = summary.milestone {
                         Label("Unlocked: \(m.title)", systemImage: m.symbol)
                             .font(.subheadline.weight(.semibold))

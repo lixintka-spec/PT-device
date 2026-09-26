@@ -45,6 +45,7 @@ struct RangeApp: App {
                         app.tab = ["today": .today, "session": .session, "progress": .progress, "care": .care][args[i + 1]] ?? .today
                     }
                     if args.contains("-unlockClinic") { await store.demoUnlock() }
+                    if let i = args.firstIndex(of: "-repGoal"), i + 1 < args.count, let n = Int(args[i + 1]) { session.repGoal = min(30, max(1, n)) }
                     if args.contains("-showPaywall") { app.showPaywall = true }
                     if ProcessInfo.processInfo.arguments.contains("-autopilot") {
                         try? await Task.sleep(for: .seconds(1))

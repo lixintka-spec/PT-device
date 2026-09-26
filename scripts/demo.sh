@@ -27,10 +27,10 @@ beat() {
   if [[ -z "${AUTO:-}" ]]; then read -r -p "  (Enter to continue) " _; fi
 }
 
-beat "Reset: phone CLOSED, fresh demo data. The outer display shows Maria's Today card."
+beat "Reset: phone CLOSED, fresh demo data, 5-rep goal. The outer display shows Maria's Today card."
 hinge -d "$DEVICE" close
 xcrun simctl terminate "$DEVICE" "$BUNDLE" >/dev/null 2>&1 || true
-xcrun simctl launch "$DEVICE" "$BUNDLE" -resetDemo ${AUTO:+-startSession} >/dev/null
+xcrun simctl launch "$DEVICE" "$BUNDLE" -resetDemo -repGoal 5 ${AUTO:+-startSession} >/dev/null
 sleep 3
 
 beat "Tap 'Start session' on the outer display (AUTO starts it for you), then open the phone."
@@ -62,6 +62,10 @@ hinge -d "$DEVICE" sweep "$H_START" "$H_TARGET" 2.4
 sleep 6.8
 hinge -d "$DEVICE" sweep "$H_TARGET" "$H_START" 1.6
 sleep 1.5
+
+beat "Rep five of five — 'Set complete.'"
+hinge -d "$DEVICE" sweep "$H_START" 94 1.8; sleep 0.5
+hinge -d "$DEVICE" sweep 94 "$H_START" 1.6; sleep 2.5
 
 beat "Close the phone to save → recovery replay on the outer display."
 hinge -d "$DEVICE" sweep "$H_START" 0 0.6

@@ -30,12 +30,13 @@ Regenerate the project after adding files: `xcodegen generate` (see `project.yml
 
 | Moment | What happens | iPhone Duo API |
 |---|---|---|
-| Phone closed | Today card on the outer display: day 14, last best 84°, target 89° | Size classes, vertical bars |
+| Phone closed | Today card on the outer display: day 14, last best 84°, target 89°, and **how many reps** (− 10 +, remembered) | Size classes, vertical bars |
 | Open | **She chooses where to start** — straight or bent. Hold still (or tap *Start here*) and the start locks; the **leveler** checks the thigh is flat. Reps are measured from her start | `CMMotionManager.deviceMotionBody` (`CMBodyIdentifiable`), hinge angle |
 | Fold | Protractor pivots **exactly on the crease**; leg bends in sync | `onHingeChange`, `reservedRegions(kind: .division)` |
 | Match last best | "Fold to 84° — this is where you were." The hardware is the progress meter | Hinge angle |
 | Reps | **Ghost range** arc to beat, parking-sensor ticks toward the target, rising tone | Hinge velocity |
-| Rushed rep | "Slow down — controlled movement" | Angular velocity |
+| Rushed rep | "Slow down — controlled movement"; it doesn't count toward the rep goal | Angular velocity |
+| Rep goal | Dots fill per clean rep, the coach counts aloud, "Set complete" at the goal (change it mid-session from the … menu) | — |
 | Target | "Perfect. Hold." buzz + 5-second ring → milestone unlocked (Climb stairs) | Core Haptics + audio mirror |
 | Close the phone | **Close-to-save**; recovery replay plays on the outer display (Day 1 → today) | Hinge status + angle |
 

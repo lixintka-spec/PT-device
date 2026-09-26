@@ -58,6 +58,7 @@ final class AppState {
             if let p = primaryPatient { session.configure(for: p) }
             tab = .session
             leveler.autoSettle = true
+            session.repGoal = 5
             session.begin()
             leveler.simulatedTilt = 12
             await wait(1.2)
@@ -88,6 +89,11 @@ final class AppState {
             await wait(6.5)
             await sweep(targetAngle, start, 1.6)
             await wait(1.5)
+            // 7b. Rep five of five: "Set complete."
+            await sweep(start, 94, 1.8)
+            await wait(0.5)
+            await sweep(94, start, 1.6)
+            await wait(2.5)
             // 8. Close the phone to save → recovery replay on the outer display.
             await sweep(start, 0, 0.35)
             await wait(9)

@@ -96,6 +96,12 @@ struct TodayCard: View {
                 }
             }
 
+            if doneToday == nil {
+                @Bindable var session = session
+                RepGoalPicker(goal: $session.repGoal)
+                    .padding(.vertical, 4)
+            }
+
             Button {
                 session.configure(for: patient)
                 app.tab = .session

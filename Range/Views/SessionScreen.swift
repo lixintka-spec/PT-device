@@ -10,6 +10,7 @@ struct SessionScreen: View {
     @Query(filter: #Predicate<Patient> { $0.isPrimary }) private var primary: [Patient]
 
     var body: some View {
+        @Bindable var session = session
         NavigationStack {
             ZStack {
                 RangeTheme.backdrop
@@ -51,6 +52,14 @@ struct SessionScreen: View {
                     } else if session.phase.isActive {
                         Button { session.changeStart() } label: { Label("Change Start Position", systemImage: "arrow.left.and.right") }
                     }
+                    if session.phase.isActive {
+                        Picker(selection: $session.repGoal) {
+                            ForEach([5, 8, 10, 12, 15, 20], id: \.self) { Text("\($0) reps").tag($0) }
+                        } label: {
+                            Label("Rep Goal", systemImage: "repeat")
+                        }
+                        .pickerStyle(.menu)
+                    }
                     Button(role: .destructive) { session.reset() } label: { Label("Restart Session", systemImage: "arrow.counterclockwise") }
                 }
             }
@@ -70,6 +79,7 @@ struct SessionReadyView: View {
     @Query(filter: #Predicate<Patient> { $0.isPrimary }) private var primary: [Patient]
 
     var body: some View {
+        @Bindable var session = session
         ArrangementView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -84,11 +94,14 @@ struct SessionReadyView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         StepRow(number: 1, title: "Choose your start", detail: "Straight or bent — start wherever is comfortable. Hold still to lock it, or tap Start here.")
                         StepRow(number: 2, title: "Match your last best", detail: "Fold to \(Int(session.lastBest))° — where you were last time.")
-                        StepRow(number: 3, title: "Push past your ghost", detail: "Slow reps. Hold \(Int(session.target))° for five seconds.")
+                        StepRow(number: 3, title: "Do your reps", detail: "\(session.repGoal) slow reps from your start. Hold \(Int(session.target))° once for five seconds.")
                         StepRow(number: 4, title: "Close the phone to save", detail: "Your recovery replays on the outside.")
                     }
                     .padding(18)
                     .rangePanel()
+                    RepGoalPicker(goal: $session.repGoal)
+                        .padding(18)
+                        .rangePanel()
                     Button {
                         session.begin()
                     } label: {
@@ -316,18 +329,9 @@ private struct StatusCorner: View {
                     .foregroundStyle(RangeTheme.coral)
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(RangeTheme.coral.opacity(0.14), in: .capsule)
-            } else if !session.reps.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(session.reps.suffix(8)) { rep in
-                        Circle()
-                            .fill(rep.compensated || rep.tooFast ? RangeTheme.coral : RangeTheme.mint)
-                            .frame(width: 9, height: 9)
-                    }
-                    Text("\(session.reps.count) rep\(session.reps.count == 1 ? "" : "s")")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(RangeTheme.secondaryText)
-                        .padding(.leading, 4)
-                }
+            } else {
+                RepProgress(done: session.cleanReps, goal: session.repGoal,
+                            flagged: session.reps.count - session.cleanReps)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: session.phase)
@@ -494,7 +498,8 @@ struct SummaryHeadline: View {
                 .foregroundStyle(summary.beyondNoise ? RangeTheme.mint : RangeTheme.secondaryText)
             HStack {
                 Chip(text: "\(Int(summary.start))° → \(Int(summary.peak.rounded()))°", systemImage: "flag.fill", tint: RangeTheme.sky)
-                Chip(text: "\(summary.reps) reps", systemImage: "repeat")
+                Chip(text: "\(summary.cleanReps) of \(summary.repGoal) reps", systemImage: "repeat",
+                     tint: summary.cleanReps >= summary.repGoal ? RangeTheme.mint : .white)
                 Chip(text: summary.targetHeld ? "Held \(Int(summary.target))°" : "Target \(Int(summary.target))°",
                      systemImage: "scope", tint: RangeTheme.amber)
             }

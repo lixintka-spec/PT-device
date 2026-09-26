@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		01EF2D34172C93DCD7A3187C /* Leveler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576D5FA22D73C9A4F9A24F68 /* Leveler.swift */; };
 		0CC3FA6AF5D8582234DFFC68 /* NoteGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85A8A0BB006C8FB95CE52F5B /* NoteGenerator.swift */; };
+		1508C0F58D87546E613EE202 /* RepGoalViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B412E68C7A1448FABE42127 /* RepGoalViews.swift */; };
 		22CF422B416994A8B632C827 /* Clinical.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3449E4F5427ADB84B9C07C /* Clinical.swift */; };
 		23750AEC6433BF3FF769CD6F /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB7580F8C32BE0A7BFC2B84 /* Secrets.swift */; };
 		247E6FF4C428E9A4585322DD /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 6DC8EB20C3A7578E244F1ED7 /* RevenueCat */; };
@@ -45,6 +46,7 @@
 		32B25D88007A30A781542EBE /* ProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStore.swift; sourceTree = "<group>"; };
 		358F6DAC1ACAEE40B8603E31 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		4971A9E003382C984C6B7CC4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		4B412E68C7A1448FABE42127 /* RepGoalViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepGoalViews.swift; sourceTree = "<group>"; };
 		4FA962608275F1CEFB04D82F /* CareTeamScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CareTeamScreen.swift; sourceTree = "<group>"; };
 		576D5FA22D73C9A4F9A24F68 /* Leveler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Leveler.swift; sourceTree = "<group>"; };
 		5F4A23DD63513BD7EA126D19 /* SessionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionScreen.swift; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 				77D9D209ACD7E57BDF66862C /* PaywallScreen.swift */,
 				B42F497090FE46B48961330F /* ProgressScreen.swift */,
 				04F7D40A4DF653D62E13B7EA /* RecoveryReplayView.swift */,
+				4B412E68C7A1448FABE42127 /* RepGoalViews.swift */,
 				5F4A23DD63513BD7EA126D19 /* SessionScreen.swift */,
 				17070CB8F8E1575A1D73003F /* TodayView.swift */,
 			);
@@ -259,6 +262,7 @@
 				7EEAC0500FE29F776935F532 /* ProgressScreen.swift in Sources */,
 				8EB415DC05E133F147A1FE90 /* RangeApp.swift in Sources */,
 				EECC60564FC8374E7A7D0C86 /* RecoveryReplayView.swift in Sources */,
+				1508C0F58D87546E613EE202 /* RepGoalViews.swift in Sources */,
 				63D3B25A9520C26B095644CB /* RootView.swift in Sources */,
 				23750AEC6433BF3FF769CD6F /* Secrets.swift in Sources */,
 				5E352E839CAE716FA3E953EE /* SeedData.swift in Sources */,

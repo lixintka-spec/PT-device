@@ -39,6 +39,8 @@ struct CoachToast: Identifiable, Equatable {
 
 struct SessionSummary: Equatable {
     let start: Double
+    let cleanReps: Int
+    let repGoal: Int
     let peak: Double
     let previousBest: Double
     let reps: Int
@@ -79,6 +81,15 @@ final class SessionEngine {
     private(set) var tickPulse = 0
     private(set) var compensatingNow = false
     private(set) var tooFastNow = false
+    /// How many clean reps the patient chose to do (remembered between sessions).
+    /// (Clamped by callers to 1...30; @Observable properties must not reassign themselves in didSet.)
+    var repGoal: Int = min(30, max(1, UserDefaults.standard.object(forKey: "repGoal") as? Int ?? 10)) {
+        didSet { UserDefaults.standard.set(repGoal, forKey: "repGoal") }
+    }
+    /// Reps that count: controlled and with the thigh level.
+    var cleanReps: Int { reps.filter { !$0.compensated && !$0.tooFast }.count }
+    var goalReached: Bool { cleanReps >= repGoal }
+
     /// Where the patient chose to start stretching (flexion°). Reps are measured from here.
     private(set) var startAngle: Double = 0
     var hasStart: Bool { phase != .ready && phase != .positioning }
@@ -89,7 +100,7 @@ final class SessionEngine {
         case .ready: "Ready when you are"
         case .positioning: "Choose your start"
         case .matchLastBest: "Bend to \(Int(lastBest))°"
-        case .reps: targetHeld ? "Nice work" : "Bend to \(Int(target))°"
+        case .reps: goalReached ? "Set complete" : (targetHeld ? "Keep going" : "Bend to \(Int(target))°")
         case .holding: "Hold"
         case .complete: "Saved"
         }
@@ -103,7 +114,8 @@ final class SessionEngine {
             return positionProgress > 0.05 ? "Setting your start… \(Int(ceil(3 - positionProgress * 3)))" : "Get comfortable, then hold still"
         case .matchLastBest: return "Where you were last time"
         case .reps:
-            if targetHeld { return "Close the phone to save" }
+            if goalReached { return "Close the phone to save" }
+            if targetHeld { return "\(cleanReps) of \(repGoal) reps" }
             let toGo = Int((target - flexion).rounded())
             return toGo > 0 ? "\(toGo)° to go" : "Hold it there"
         case .holding: return "\(Int(ceil(holdRemaining))) more second\(Int(ceil(holdRemaining)) == 1 ? "" : "s")"
@@ -355,6 +367,14 @@ final class SessionEngine {
         guard !rep.compensated && !rep.tooFast else { return }
         let previous = max(sessionBest, lastBest)
         if rep.peak > sessionBest { sessionBest = rep.peak }
+        if cleanReps == repGoal {
+            feedback?.success()
+            feedback?.say("\(repGoal). Set complete. Close the phone to save.")
+            show(.success, "Set complete", "\(repGoal) of \(repGoal) reps — close the phone to save.", "checkmark.circle.fill", duration: 4)
+            return
+        } else if cleanReps < repGoal {
+            feedback?.say("\(cleanReps)")
+        }
         if rep.peak > previous + 0.5 && phase != .holding && toast?.kind != .milestone {
             let gain = rep.peak - lastBest
             feedback?.success()
@@ -388,7 +408,7 @@ final class SessionEngine {
         if repInProgress { repInProgress = false }  // discard the half-rep caused by closing
         feedback?.setTone(active: false, flexion: 0)
         let peak = max(sessionBest, reps.filter { !$0.compensated && !$0.tooFast }.map(\.peak).max() ?? 0)
-        let result = SessionSummary(start: startAngle, peak: peak, previousBest: lastBest, reps: reps.count,
+        let result = SessionSummary(start: startAngle, cleanReps: cleanReps, repGoal: repGoal, peak: peak, previousBest: lastBest, reps: reps.count,
                                     targetHeld: targetHeld, target: target, milestone: unlockedMilestone)
         summary = result
         phase = .complete
@@ -401,6 +421,7 @@ final class SessionEngine {
                                        fastReps: reps.filter(\.tooFast).count, pain: 3,
                                        target: target, targetHeld: targetHeld)
             session.startFlexion = startAngle
+            session.repGoal = repGoal
             session.patient = patient
             context.insert(session)
             try? context.save()
