@@ -36,7 +36,7 @@ Regenerate the project after adding files: `xcodegen generate` (see `project.yml
 | Match last best | "Fold to 84° — this is where you were." The hardware is the progress meter | Hinge angle |
 | Reps | **Ghost range** arc to beat, parking-sensor ticks toward the target, rising tone | Hinge velocity |
 | Rushed rep | "Slow down — controlled movement"; it doesn't count toward the rep goal | Angular velocity |
-| Rep goal | Dots fill per clean rep, the coach counts aloud, "Set complete" at the goal (change it mid-session from the … menu) | — |
+| Reps | **One rep = out and back**: bend to the amber dot ("Bend to 89°"), then "Now back to 40°" to the blue start dot. Dots fill per clean rep, the coach counts aloud, "Set complete" at the goal | Hinge angle |
 | Target | "Perfect. Hold." buzz + 5-second ring → milestone unlocked (Climb stairs) | Core Haptics + audio mirror |
 | Close the phone | **Close-to-save**; recovery replay plays on the outer display (Day 1 → today) | Hinge status + angle |
 

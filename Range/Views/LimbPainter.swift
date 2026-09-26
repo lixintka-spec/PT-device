@@ -162,7 +162,7 @@ enum LimbPainter {
     /// A quiet arc: no labels. Amber dot = where to go. Mint trail = your best today. Blue dot = your start.
     static func drawGuide(in ctx: inout GraphicsContext, pivot: CGPoint, radius R: CGFloat,
                           flexion: Double, tilt: Double, start: Double?, ghost: Double?,
-                          target: Double?, accent: Color) {
+                          target: Double?, accent: Color, zoneFrom: Double? = nil, emphasizeStart: Bool = false) {
         func p(_ deg: Double, _ r: CGFloat) -> CGPoint { jointPoint(pivot, flexion: deg, tilt: tilt, r) }
         func arc(_ a: Double, _ b: Double, _ r: CGFloat) -> Path {
             var path = Path()
@@ -190,14 +190,29 @@ enum LimbPainter {
             ctx.stroke(arc(start ?? 0, ghost, R + 16), with: .color(RangeTheme.mint.opacity(0.28)),
                        style: StrokeStyle(lineWidth: 6, lineCap: .round))
         }
-        if let start, start > 0.5 {
+        // The zone that counts as "out": bend into it, then come back.
+        // Drawn just outside the leg's reach so the foot never hides where to go.
+        let goalR = R + 30
+        if let zoneFrom, let target, target > zoneFrom {
+            ctx.stroke(arc(zoneFrom, target, goalR), with: .color(RangeTheme.amber.opacity(0.45)),
+                       style: StrokeStyle(lineWidth: 12, lineCap: .round))
+        }
+        if let start {
             let dot = p(start, R)
-            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 6, y: dot.y - 6, width: 12, height: 12)), with: .color(RangeTheme.sky))
+            let r: CGFloat = emphasizeStart ? 13 : 6
+            if emphasizeStart {
+                ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 22, y: dot.y - 22, width: 44, height: 44)), with: .color(RangeTheme.sky.opacity(0.22)))
+            }
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - r, y: dot.y - r, width: r * 2, height: r * 2)), with: .color(RangeTheme.sky))
         }
         if let target {
-            let dot = p(target, R)
-            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 13, y: dot.y - 13, width: 26, height: 26)), with: .color(RangeTheme.amber.opacity(0.22)))
-            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 7, y: dot.y - 7, width: 14, height: 14)), with: .color(RangeTheme.amber))
+            var tick = Path()
+            tick.move(to: p(target, R - 6))
+            tick.addLine(to: p(target, goalR))
+            ctx.stroke(tick, with: .color(RangeTheme.amber.opacity(0.6)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            let dot = p(target, goalR)
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 15, y: dot.y - 15, width: 30, height: 30)), with: .color(RangeTheme.amber.opacity(0.25)))
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 8, y: dot.y - 8, width: 16, height: 16)), with: .color(RangeTheme.amber))
         }
     }
 

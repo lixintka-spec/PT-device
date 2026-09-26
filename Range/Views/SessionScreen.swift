@@ -93,8 +93,8 @@ struct SessionReadyView: View {
                     }
                     VStack(alignment: .leading, spacing: 10) {
                         StepRow(number: 1, title: "Choose your start", detail: "Straight or bent — start wherever is comfortable. Hold still to lock it, or tap Start here.")
-                        StepRow(number: 2, title: "Match your last best", detail: "Fold to \(Int(session.lastBest))° — where you were last time.")
-                        StepRow(number: 3, title: "Do your reps", detail: "\(session.repGoal) slow reps from your start. Hold \(Int(session.target))° once for five seconds.")
+                        StepRow(number: 2, title: "One rep = out and back", detail: "Bend to the amber dot, then come back to the blue dot (your start).")
+                        StepRow(number: 3, title: "Do \(session.repGoal) reps", detail: "Rep 1 aims for your last best (\(Int(session.lastBest))°), then \(Int(session.target))°. Hold it once for five seconds.")
                         StepRow(number: 4, title: "Close the phone to save", detail: "Your recovery replays on the outside.")
                     }
                     .padding(18)
@@ -189,18 +189,16 @@ struct SessionLiveView: View {
             let L = onCrease
                 ? min(min(layout.creaseX, size.width - layout.creaseX) * 0.62, size.height * 0.36)
                 : (stacked ? min(size.width * 0.30, size.height * 0.2) : min(size.width * 0.22, size.height * 0.34))
-            let radius = min(L * 1.02, size.height - pivotY - (onCrease ? 56 : 36))
+            let radius = min(L * 1.02, size.height - pivotY - (onCrease ? 80 : 60))
             let textWidth = onCrease ? min(380, max(240, layout.trailingWidth - 40)) : (stacked ? size.width - 48 : size.width * 0.38)
             // Folded shut and not being dragged: there's no knee to measure yet.
             let waitingToOpen = hinge.status == .closed && !hinge.isManual && session.phase == .positioning
             let shownFlexion = waitingToOpen ? 0 : hinge.flexion
             let holding = session.phase == .holding
             let accent: Color = holding ? RangeTheme.amber : (session.phase == .positioning ? RangeTheme.sky : RangeTheme.mint)
-            let goal: Double? = switch session.phase {
-                case .matchLastBest: session.lastBest
-                case .reps, .holding: session.targetHeld ? nil : session.target
-                default: nil
-            }
+            let exercising = session.phase.isExercising && !(session.goalReached && session.repStage == .out)
+            let goal: Double? = exercising ? session.currentGoal : nil
+            let comingBack = exercising && session.repStage == .back
 
             ZStack(alignment: .topLeading) {
                 // The leg — drag it to test.
@@ -209,7 +207,9 @@ struct SessionLiveView: View {
                                           flexion: shownFlexion, tilt: leveler.tilt,
                                           start: session.hasStart ? session.startAngle : nil,
                                           ghost: session.sessionBest > 0 ? session.sessionBest : nil,
-                                          target: goal, accent: accent)
+                                          target: goal, accent: accent,
+                                          zoneFrom: exercising && !comingBack ? session.repTurn : nil,
+                                          emphasizeStart: comingBack)
                     LimbPainter.draw(in: &ctx, pivot: pivot, length: L, flexion: shownFlexion, tilt: leveler.tilt,
                                      joint: session.exercise.joint,
                                      style: .init(deviceGlow: 0.9, kneeGlow: holding ? 0.8 : 0.35, glowColor: accent))
@@ -274,6 +274,7 @@ struct SessionLiveView: View {
                         Button { session.lockStart() } label: {
                             Label("Start here", systemImage: "flag.fill").font(.headline).padding(.horizontal, 8)
                         }
+                        .disabled(!session.canStart(at: hinge.flexion))
                         .buttonStyle(.borderedProminent)
                         .tint(RangeTheme.sky)
                         .foregroundStyle(.black)
@@ -408,7 +409,7 @@ struct ToastView: View {
     var toast: CoachToast
     var tint: Color {
         switch toast.kind {
-        case .info: RangeTheme.sky
+        case .info, .tip: RangeTheme.sky
         case .success: RangeTheme.mint
         case .warning: RangeTheme.coral
         case .milestone: RangeTheme.amber
