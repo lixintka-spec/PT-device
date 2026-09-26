@@ -38,6 +38,7 @@ struct CoachToast: Identifiable, Equatable {
 }
 
 struct SessionSummary: Equatable {
+    let start: Double
     let peak: Double
     let previousBest: Double
     let reps: Int
@@ -78,11 +79,14 @@ final class SessionEngine {
     private(set) var tickPulse = 0
     private(set) var compensatingNow = false
     private(set) var tooFastNow = false
+    /// Where the patient chose to start stretching (flexion°). Reps are measured from here.
+    private(set) var startAngle: Double = 0
+    var hasStart: Bool { phase != .ready && phase != .positioning }
 
     var headline: String {
         switch phase {
         case .ready: "Ready when you are"
-        case .positioning: "Get into position"
+        case .positioning: "Choose your start"
         case .matchLastBest: "Fold to your last best"
         case .reps: targetHeld ? "Great session" : "Bend a little further"
         case .holding: "Perfect. Hold."
@@ -93,7 +97,7 @@ final class SessionEngine {
     var instruction: String {
         switch phase {
         case .ready: "Your comfortable max is \(Int(comfortableMax))°. Let's aim for \(Int(target))° today."
-        case .positioning: exercise.startPosition
+        case .positioning: "Straight or bent — start wherever feels right. Hold still, or tap Start here."
         case .matchLastBest: "This is where you were last time: \(Int(lastBest))°."
         case .reps: targetHeld ? "Close the phone to save." : "Slow, controlled bends. Push past your ghost."
         case .holding: "Hold for \(Int(ceil(holdRemaining))) more second\(Int(ceil(holdRemaining)) == 1 ? "" : "s")."
@@ -143,9 +147,42 @@ final class SessionEngine {
         feedback?.say("Get into position.")
     }
 
-    func skipPositioning() {
-        guard phase == .positioning else { return }
-        advanceToMatch()
+    /// "Start here": lock the start at the current angle immediately.
+    func lockStart() {
+        guard phase == .positioning, let hinge else { return }
+        lockStart(at: hinge.flexion)
+    }
+
+    /// Go back and pick a different starting position mid-session. Reps so far are kept.
+    func changeStart() {
+        guard phase.isActive, phase != .positioning else { return }
+        phase = .positioning
+        positionProgress = 0
+        matchedAnnounced = false
+        matchedAt = nil
+        matchProgress = 0
+        repInProgress = false
+        feedback?.say("Move to your new start and hold still.")
+        show(.info, "Choose a new start", "Move to where you want to begin, then hold still.", "arrow.left.and.right", duration: 3)
+    }
+
+    private func lockStart(at flexion: Double) {
+        guard let hinge else { return }
+        // Straight limb with the phone flat doubles as the zero check.
+        if hinge.status == .fullyOpen && flexion < 4 { hinge.zeroCheck() }
+        startAngle = hinge.flexion.rounded()
+        positionProgress = 1
+        repInProgress = false
+        feedback?.success()
+        if startAngle >= lastBest - 3 || matchedAnnounced {
+            phase = .reps
+            feedback?.say("Start set at \(Int(startAngle)) degrees. Push toward \(Int(target)).")
+            show(.success, "Start set at \(Int(startAngle))°", "Push toward \(Int(target))° from here.", "flag.fill", duration: 3)
+        } else {
+            phase = .matchLastBest
+            feedback?.say("Start set at \(Int(startAngle)) degrees. Now fold to your last best, \(Int(lastBest)).")
+            show(.success, "Start set at \(Int(startAngle))°", "Now fold to your last best — \(Int(lastBest))°.", "flag.fill", duration: 3)
+        }
     }
 
     func reset() {
@@ -159,6 +196,7 @@ final class SessionEngine {
         toast = nil
         unlockedMilestone = nil
         summary = nil
+        startAngle = 0
         repInProgress = false
         matchedAnnounced = false
         matchedAt = nil
@@ -183,15 +221,14 @@ final class SessionEngine {
 
         case .positioning:
             leveler.settleStep(dt: dt)
-            let straight = flexion < 10
-            if straight && leveler.isLevel {
+            feedback?.setTone(active: false, flexion: flexion)
+            // Any angle works as a start — it just has to be steady and level.
+            let still = abs(velocity) < 4 && hinge.status != .closed
+            if still && leveler.isLevel {
                 positionProgress = min(1, positionProgress + dt / 3)
-                if positionProgress >= 1 {
-                    hinge.zeroCheck()
-                    advanceToMatch()
-                }
+                if positionProgress >= 1 { lockStart(at: flexion) }
             } else {
-                positionProgress = max(0, positionProgress - dt)
+                positionProgress = max(0, positionProgress - dt * 1.5)
             }
 
         case .matchLastBest:
@@ -245,26 +282,22 @@ final class SessionEngine {
         }
     }
 
-    private func advanceToMatch() {
-        phase = .matchLastBest
-        positionProgress = 1
-        feedback?.success()
-        feedback?.say("Locked. Now fold to your last best, \(Int(lastBest)) degrees.")
-        show(.success, "Position locked", "Zero check done. Fold to \(Int(lastBest))°.", "checkmark.seal.fill", duration: 3)
-    }
+    /// How far past the start a movement must go to count as a rep.
+    private var repRise: Double { max(6, min(15, (target - startAngle) * 0.45)) }
 
     private func trackReps(flexion: Double, velocity: Double, leveler: Leveler) {
-        compensatingNow = leveler.isDrifting && flexion > 20
+        let base = startAngle
+        compensatingNow = leveler.isDrifting && flexion > base + 8
         if compensatingNow && driftCooldown <= 0 {
             driftCooldown = 3
             feedback?.warning()
             show(.warning, exercise.driftCue, "This rep won't count toward your best.", "level.fill", duration: 2.5)
         }
 
-        let tooFast = abs(velocity) > 150 && flexion > 15
+        let tooFast = abs(velocity) > 110 && flexion > base + 5
         tooFastNow = tooFast
         if !repInProgress {
-            if flexion > 25 {
+            if flexion > base + repRise * 0.6 {
                 repInProgress = true
                 repPeak = flexion
                 repCompensated = compensatingNow
@@ -288,7 +321,7 @@ final class SessionEngine {
                     show(.warning, "Slow down", "Controlled movement — two seconds up, two down.", "tortoise.fill", duration: 2.8)
                 }
             }
-            if flexion < 14 {
+            if flexion < base + repRise * 0.35 {
                 slowDownPending = false
                 finishRep()
             }
@@ -299,7 +332,7 @@ final class SessionEngine {
 
     private func finishRep() {
         repInProgress = false
-        guard repPeak >= 30 else { return }
+        guard repPeak >= startAngle + repRise else { return }
         let rep = Rep(peak: repPeak, compensated: repCompensated, tooFast: repTooFast)
         reps.append(rep)
         guard !rep.compensated && !rep.tooFast else { return }
@@ -338,7 +371,7 @@ final class SessionEngine {
         if repInProgress { repInProgress = false }  // discard the half-rep caused by closing
         feedback?.setTone(active: false, flexion: 0)
         let peak = max(sessionBest, reps.filter { !$0.compensated && !$0.tooFast }.map(\.peak).max() ?? 0)
-        let result = SessionSummary(peak: peak, previousBest: lastBest, reps: reps.count,
+        let result = SessionSummary(start: startAngle, peak: peak, previousBest: lastBest, reps: reps.count,
                                     targetHeld: targetHeld, target: target, milestone: unlockedMilestone)
         summary = result
         phase = .complete
@@ -350,6 +383,7 @@ final class SessionEngine {
                                        reps: reps.count, compensatedReps: reps.filter(\.compensated).count,
                                        fastReps: reps.filter(\.tooFast).count, pain: 3,
                                        target: target, targetHeld: targetHeld)
+            session.startFlexion = startAngle
             session.patient = patient
             context.insert(session)
             try? context.save()

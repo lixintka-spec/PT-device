@@ -54,6 +54,8 @@ struct Chip: View {
             Text(text)
         }
         .font(.caption.weight(.semibold))
+        .lineLimit(1)
+        .fixedSize()
         .foregroundStyle(tint)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

@@ -88,6 +88,8 @@ final class RehabSession {
     var pain: Int
     var target: Double
     var targetHeld: Bool
+    /// Where the patient chose to start stretching (0 = straight).
+    var startFlexion: Double = 0
     var patient: Patient?
 
     init(date: Date, peakFlexion: Double, comfortableMax: Double, extensionDeficit: Double,

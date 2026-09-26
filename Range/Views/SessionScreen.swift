@@ -48,8 +48,10 @@ struct SessionScreen: View {
                 .visibilityPriority(.low)
                 ToolbarOverflowMenu {
                     Button { app.showDemoControls = true } label: { Label("Demo Controls", systemImage: "slider.horizontal.3") }
-                    if session.phase.isActive {
-                        Button { session.skipPositioning() } label: { Label("Skip Positioning", systemImage: "forward.fill") }
+                    if session.phase == .positioning {
+                        Button { session.lockStart() } label: { Label("Start Here", systemImage: "flag.fill") }
+                    } else if session.phase.isActive {
+                        Button { session.changeStart() } label: { Label("Change Start Position", systemImage: "arrow.left.and.right") }
                     }
                     Button(role: .destructive) { session.reset() } label: { Label("Restart Session", systemImage: "arrow.counterclockwise") }
                 }
@@ -82,7 +84,7 @@ struct SessionReadyView: View {
                             .foregroundStyle(RangeTheme.secondaryText)
                     }
                     VStack(alignment: .leading, spacing: 10) {
-                        StepRow(number: 1, title: "Get into position", detail: session.exercise.startPosition)
+                        StepRow(number: 1, title: "Choose your start", detail: "Straight or bent — start wherever is comfortable. Hold still to lock it, or tap Start here.")
                         StepRow(number: 2, title: "Match your last best", detail: "Fold to \(Int(session.lastBest))° — where you were last time.")
                         StepRow(number: 3, title: "Push past your ghost", detail: "Slow reps. Hold \(Int(session.target))° for five seconds.")
                         StepRow(number: 4, title: "Close the phone to save", detail: "Your recovery replays on the outside.")
@@ -171,6 +173,7 @@ struct SessionLiveView: View {
                 Canvas { ctx, _ in
                     LimbPainter.drawProtractor(in: &ctx, pivot: pivot, radius: radius, marks: .init(
                         flexion: hinge.flexion, tilt: leveler.tilt,
+                        start: session.hasStart ? session.startAngle : nil,
                         lastBest: session.lastBest,
                         ghost: session.sessionBest > 0 ? session.sessionBest : nil,
                         target: session.phase == .positioning ? nil : session.target,
@@ -188,7 +191,8 @@ struct SessionLiveView: View {
                     LevelVial(tilt: leveler.tilt, label: "\(session.exercise.stableSegment.capitalized) level",
                               isSimulated: leveler.isSimulated)
                     if session.phase == .positioning {
-                        PositionLockView(progress: session.positionProgress, straight: hinge.flexion < 10)
+                        PositionLockView(angle: hinge.flexion, progress: session.positionProgress,
+                                         isLevel: leveler.isLevel) { session.lockStart() }
                     } else {
                         RepStrip(reps: session.reps, target: session.target, lastBest: session.lastBest)
                     }
@@ -216,12 +220,23 @@ struct SessionLiveView: View {
                         .foregroundStyle(RangeTheme.secondaryText)
                         .multilineTextAlignment(.trailing)
                     if session.phase != .positioning {
-                        HStack(spacing: 6) {
-                            Chip(text: "Last \(Int(session.lastBest))°", tint: .white)
-                            if session.sessionBest > 0 {
-                                Chip(text: "Ghost \(Int(session.sessionBest.rounded()))°", systemImage: "sparkles", tint: RangeTheme.mint)
+                        let start = Chip(text: "Start \(Int(session.startAngle))°", systemImage: "flag.fill", tint: RangeTheme.sky)
+                        let last = Chip(text: "Last \(Int(session.lastBest))°", tint: .white)
+                        let ghost = Chip(text: "Ghost \(Int(session.sessionBest.rounded()))°", systemImage: "sparkles", tint: RangeTheme.mint)
+                        let target = Chip(text: "Target \(Int(session.target))°", systemImage: "scope", tint: RangeTheme.amber)
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 6) {
+                                start; last
+                                if session.sessionBest > 0 { ghost }
+                                target
                             }
-                            Chip(text: "Target \(Int(session.target))°", systemImage: "scope", tint: RangeTheme.amber)
+                            VStack(alignment: .trailing, spacing: 6) {
+                                HStack(spacing: 6) { start; last }
+                                HStack(spacing: 6) {
+                                    if session.sessionBest > 0 { ghost }
+                                    target
+                                }
+                            }
                         }
                         .padding(.top, 4)
                     }
@@ -256,21 +271,33 @@ struct SessionLiveView: View {
     }
 }
 
+/// The patient decides where to start: any angle, as long as it's steady and level.
 struct PositionLockView: View {
+    var angle: Double
     var progress: Double
-    var straight: Bool
+    var isLevel: Bool
+    var onStartHere: () -> Void
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(straight ? "Leg straight · phone flat" : "Straighten fully to start",
-                  systemImage: straight ? "checkmark.circle.fill" : "arrow.left.and.right")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(straight ? RangeTheme.mint : RangeTheme.amber)
-            HStack {
-                ProgressView(value: progress).tint(RangeTheme.mint)
-                Text(progress >= 1 ? "Locked" : (progress > 0 ? "Hold \(Int(ceil(3 - progress * 3)))" : "Hold still"))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Start at \(Int(angle.rounded()))°", systemImage: "flag.fill")
+                    .font(.headline)
+                    .foregroundStyle(RangeTheme.sky)
+                    .contentTransition(.numericText(value: angle))
+                Spacer()
+                Text(isLevel ? (progress > 0 ? "Hold \(Int(ceil(3 - progress * 3)))" : "Hold still") : "Level your thigh")
                     .font(RangeTheme.numeral(13, weight: .bold))
-                    .foregroundStyle(RangeTheme.secondaryText)
+                    .foregroundStyle(isLevel ? RangeTheme.secondaryText : RangeTheme.amber)
             }
+            ProgressView(value: progress).tint(RangeTheme.sky)
+            Button(action: onStartHere) {
+                Label("Start here", systemImage: "flag.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(RangeTheme.sky)
+            .foregroundStyle(.black)
         }
     }
 }
@@ -417,6 +444,7 @@ struct SummaryHeadline: View {
                 .font(.headline)
                 .foregroundStyle(summary.beyondNoise ? RangeTheme.mint : RangeTheme.secondaryText)
             HStack {
+                Chip(text: "\(Int(summary.start))° → \(Int(summary.peak.rounded()))°", systemImage: "flag.fill", tint: RangeTheme.sky)
                 Chip(text: "\(summary.reps) reps", systemImage: "repeat")
                 Chip(text: summary.targetHeld ? "Held \(Int(summary.target))°" : "Target \(Int(summary.target))°",
                      systemImage: "scope", tint: RangeTheme.amber)

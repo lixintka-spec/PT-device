@@ -82,6 +82,9 @@ struct OuterSummaryView: View {
                     if summary.beyondNoise {
                         Text("Beyond measurement error — real progress.").font(.subheadline.weight(.semibold)).foregroundStyle(RangeTheme.mint)
                     }
+                    Label("Stretched from \(Int(summary.start))° to \(Int(summary.peak.rounded()))°", systemImage: "flag.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(RangeTheme.sky)
                     if let m = summary.milestone {
                         Label("Unlocked: \(m.title)", systemImage: m.symbol)
                             .font(.subheadline.weight(.semibold))

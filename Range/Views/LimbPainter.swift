@@ -162,6 +162,7 @@ enum LimbPainter {
     struct Marks {
         var flexion: Double
         var tilt: Double
+        var start: Double? = nil
         var lastBest: Double?
         var ghost: Double?
         var target: Double?
@@ -179,15 +180,27 @@ enum LimbPainter {
         }
         ctx.stroke(base, with: .color(.white.opacity(0.14)), lineWidth: 1.5)
 
-        // Earned wedge.
+        // Earned wedge: from the chosen start to where the joint is now.
+        let from = min(m.start ?? 0, m.flexion)
         var wedge = Path()
         wedge.move(to: pivot)
-        for d in stride(from: 0.0, through: m.flexion, by: 1) { wedge.addLine(to: p(d, R)) }
+        for d in stride(from: from, through: m.flexion, by: 1) { wedge.addLine(to: p(d, R)) }
         wedge.addLine(to: p(m.flexion, R))
         wedge.closeSubpath()
         let accent = m.inTarget ? RangeTheme.amber : RangeTheme.mint
         ctx.fill(wedge, with: .radialGradient(Gradient(colors: [accent.opacity(0.02), accent.opacity(0.22 + 0.1 * m.pulse)]),
                                               center: pivot, startRadius: 0, endRadius: R))
+        // Chosen start.
+        if let start = m.start, start > 0.5 {
+            var line = Path()
+            line.move(to: pivot)
+            line.addLine(to: p(start, R + 20))
+            ctx.stroke(line, with: .color(RangeTheme.sky.opacity(0.9)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+            let dot = p(start, R + 20)
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 5, y: dot.y - 5, width: 10, height: 10)), with: .color(RangeTheme.sky))
+            ctx.draw(Text("Start \(Int(start))°").font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(RangeTheme.sky), at: p(start - 10, R + 36))
+        }
 
         // Ticks every 5°, labels every 30°.
         for d in stride(from: 0, through: 180, by: 5) {
