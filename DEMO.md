@@ -6,7 +6,7 @@ and a clinic dashboard — the fold is the measurement, the outer screen is the 
 ## Setup (5 minutes before recording)
 
 1. Xcode 27.1 → run **Range** on the **iPhone Duo** simulator once (installs it).
-2. Terminal (keep off-camera): `cd ~/Desktop/Range && ./scripts/demo.sh`
+2. Terminal (keep off-camera): `cd ~/Downloads/PT-device && ./scripts/demo.sh`
    The script resets the demo data, closes the phone and launches Range. Press **Enter** at each ▶ beat.
 3. Record the **Device Hub window**: ⌘⇧5 → *Record Selected Window* (turn on your microphone under
    Options to narrate live). The window shows whichever display is active — outer when closed,
