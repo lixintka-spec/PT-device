@@ -1,0 +1,63 @@
+3d-demo/src/pointMaterial.js
+  s_61b9f4bd1999b8::t_bd97772479ab78 63
+  s_61b9f4bd1999b8::t_61f5015efc1af7 51
+  s_61b9f4bd1999b8::t_5714c31917f0bd 98-99
+  s_61b9f4bd1999b8::t_294877c033096b 41,48-50,57,59,91
+  s_61b9f4bd1999b8::t_d15a1b829c43c4 1-40,42-47,52-56,58,60-62,64-90,92-97,100-106
+3d-demo/.gitignore
+  s_61b9f4bd1999b8::t_b19889ed6dc017 1-2
+3d-demo/src/anatomy.js
+  s_61b9f4bd1999b8::t_294877c033096b 79-80
+  s_61b9f4bd1999b8::t_875ecd4f66c8aa 43,45-49,54-58
+  s_61b9f4bd1999b8::t_912454bf0a6b91 119-120
+  s_61b9f4bd1999b8::t_06b1d8cc2e414a 1-42,44,50-53,59-78,81-118,121-125
+3d-demo/src/main.js
+  s_61b9f4bd1999b8::t_294877c033096b 35-36,99,153-157,166
+  s_61b9f4bd1999b8::t_61f5015efc1af7 125
+  s_61b9f4bd1999b8::t_321ebcfeafc40e 1-31,33-34,37-42,44-66,69-98,100-124,126-152,158-165,167-175
+  s_61b9f4bd1999b8::t_875ecd4f66c8aa 32,43
+  s_61b9f4bd1999b8::t_b19889ed6dc017 67-68
+3d-demo/src/sampler.js
+  s_61b9f4bd1999b8::t_c2fce4917a1b59 31-42,47,50-54
+  s_61b9f4bd1999b8::t_a0e70d11ba86df 1-22,24-30,43-46,48-49,55-225
+  s_61b9f4bd1999b8::t_6b115cd4a834a9 23
+3d-demo/index.html
+  s_61b9f4bd1999b8::t_294877c033096b 7
+  s_61b9f4bd1999b8::t_39cf3271ce8287 1-6,8-41
+3d-demo/src/style.css
+  s_61b9f4bd1999b8::t_c23120d3932e96 61,99
+  s_61b9f4bd1999b8::t_39cf3271ce8287 1-60,62-98,100-285
+3d-demo/src/cloud.js
+  s_61b9f4bd1999b8::t_d903d4a08a7314 1-5,7-82
+  s_61b9f4bd1999b8::t_c23120d3932e96 6
+3d-demo/vite.config.js
+  s_61b9f4bd1999b8::t_b19889ed6dc017 1-6
+3d-demo/src/sdf.js
+  s_61b9f4bd1999b8::t_e66c3c80a0ea6d 86-88,95-97,158-161
+  s_61b9f4bd1999b8::t_c2fce4917a1b59 109-115,119-124
+  s_61b9f4bd1999b8::t_3234adacaf8eb2 1-85,89-94,98-108,116-118,125-157,162-179
+3d-demo/package.json
+  s_61b9f4bd1999b8::t_510987fe0b7590 1-17
+3d-demo/src/worker.js
+  s_61b9f4bd1999b8::t_6b115cd4a834a9 1-13
+3d-demo/README.md
+  s_61b9f4bd1999b8::t_c23120d3932e96 1-32
+3d-demo/package-lock.json
+  s_61b9f4bd1999b8::t_3b170bcd498518 1-837
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "8a467ad841cb745ae30dc3cf017bfd4e2c61909c",
+  "prompts": {},
+  "sessions": {
+    "s_61b9f4bd1999b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5bd9b638-7dfc-455d-bfe1-db6e49c417a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Glenn Sonna <kenpachi.os@gmail.com>"
+    }
+  }
+}
