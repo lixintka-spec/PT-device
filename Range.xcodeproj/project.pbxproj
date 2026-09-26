@@ -32,6 +32,7 @@
 		BE7C5ED24F9225E2155D8466 /* CareTeamScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FA962608275F1CEFB04D82F /* CareTeamScreen.swift */; };
 		CF06F82E8CC906FCC9521C1E /* CameraAssessmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6226BC58620241E4B7849FBF /* CameraAssessmentView.swift */; };
 		E9933700DBDA60BA21A2C06D /* SessionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F4A23DD63513BD7EA126D19 /* SessionScreen.swift */; };
+		EB1300B4CDA96E5735D52999 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2739AF3D987A4F7049F13F19 /* Assets.xcassets */; };
 		EECC60564FC8374E7A7D0C86 /* RecoveryReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F7D40A4DF653D62E13B7EA /* RecoveryReplayView.swift */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +41,7 @@
 		17070CB8F8E1575A1D73003F /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		1F3449E4F5427ADB84B9C07C /* Clinical.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clinical.swift; sourceTree = "<group>"; };
 		23BDDA1AFDD003928E0ADD7E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		2739AF3D987A4F7049F13F19 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		32B25D88007A30A781542EBE /* ProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStore.swift; sourceTree = "<group>"; };
 		358F6DAC1ACAEE40B8603E31 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		4971A9E003382C984C6B7CC4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 		C5077DB1BE29249ECE381AC2 /* Range */ = {
 			isa = PBXGroup;
 			children = (
+				2739AF3D987A4F7049F13F19 /* Assets.xcassets */,
 				FBDE0FF5C932E80AD3292398 /* App */,
 				8EE8657BC74E934B1B30760D /* Engine */,
 				C90601C638E845450CF5E6B5 /* Model */,
@@ -171,6 +174,7 @@
 			buildConfigurationList = 90688D001C41F885702B5308 /* Build configuration list for PBXNativeTarget "Range" */;
 			buildPhases = (
 				9B5897F9B9A00808CFD3F434 /* Sources */,
+				EA847F485136512CDAFFAFD8 /* Resources */,
 				980036A154618AF043F8984E /* Frameworks */,
 			);
 			buildRules = (
@@ -221,6 +225,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EA847F485136512CDAFFAFD8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB1300B4CDA96E5735D52999 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9B5897F9B9A00808CFD3F434 /* Sources */ = {
