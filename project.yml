@@ -1,0 +1,40 @@
+name: Range
+options:
+  bundleIdPrefix: com.lambertzhang
+  deploymentTarget:
+    iOS: "27.1"
+  createIntermediateGroups: true
+packages:
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios-spm
+    from: "5.0.0"
+targets:
+  Range:
+    type: application
+    platform: iOS
+    sources:
+      - path: Range
+    dependencies:
+      - package: RevenueCat
+        product: RevenueCat
+      - package: RevenueCat
+        product: RevenueCatUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lambertzhang.range
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Range
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_NSMotionUsageDescription: "Range uses motion to check that your limb stays level during each exercise."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Range uses the camera during clinic assessments so your therapist can review your movement."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Range does not record audio."
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
