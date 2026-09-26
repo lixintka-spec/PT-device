@@ -35,18 +35,14 @@ struct SessionScreen: View {
                     }
                     .visibilityPriority(.high)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { app.showPlacementGuide = true } label: {
-                        Label("Placement", systemImage: "figure.stand")
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarOverflowMenu {
+                    Button { app.showPlacementGuide = true } label: { Label("How to Wear", systemImage: "figure.stand") }
                     Button { app.isMuted.toggle() } label: {
                         Label(app.isMuted ? "Unmute" : "Mute", systemImage: app.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                     }
-                }
-                .visibilityPriority(.low)
-                ToolbarOverflowMenu {
+                    if hinge.isManual {
+                        Button { hinge.useHardware() } label: { Label("Use Hinge", systemImage: "rectangle.portrait.on.rectangle.portrait") }
+                    }
                     Button { app.showDemoControls = true } label: { Label("Demo Controls", systemImage: "slider.horizontal.3") }
                     if session.phase == .positioning {
                         Button { session.lockStart() } label: { Label("Start Here", systemImage: "flag.fill") }
@@ -154,6 +150,8 @@ struct PlacementCard: View {
 
 // MARK: - Live
 
+/// The session in one glance: the leg, the angle, one instruction, and one button only when needed.
+/// Drag the leg to test without folding the phone.
 struct SessionLiveView: View {
     @Environment(SessionEngine.self) private var session
     @Environment(HingeEngine.self) private var hinge
@@ -163,142 +161,160 @@ struct SessionLiveView: View {
         GeometryReader { proxy in
             let layout = FoldLayout(proxy)
             let size = proxy.size
-            let pivotY = layout.creaseY.map { min(size.height * 0.6, max(size.height * 0.3, $0)) } ?? size.height * 0.5
-            let pivot = CGPoint(x: layout.creaseX, y: pivotY)
-            let L = min(min(layout.creaseX, size.width - layout.creaseX) * 0.6, size.height * 0.34)
-            let radius = min(L * 1.02, size.height - pivotY - 64)
-            let inTarget = session.phase == .holding
+            // Inner display: the knee sits on the physical crease. Outer display (no fold):
+            // leg on the left, text on the right, nothing overlapping.
+            let onCrease = layout.hasFold
+            let pivotY = layout.creaseY.map { min(size.height * 0.6, max(size.height * 0.3, $0)) } ?? size.height * (onCrease ? 0.46 : 0.36)
+            let pivot = CGPoint(x: onCrease ? layout.creaseX : size.width * 0.34, y: pivotY)
+            let L = onCrease
+                ? min(min(layout.creaseX, size.width - layout.creaseX) * 0.62, size.height * 0.36)
+                : min(size.width * 0.22, size.height * 0.34)
+            let radius = min(L * 1.02, size.height - pivotY - (onCrease ? 56 : 36))
+            let textWidth = onCrease ? min(380, max(240, layout.trailingWidth - 40)) : size.width * 0.38
+            let holding = session.phase == .holding
+            let accent: Color = holding ? RangeTheme.amber : (session.phase == .positioning ? RangeTheme.sky : RangeTheme.mint)
+            let goal: Double? = switch session.phase {
+                case .matchLastBest: session.lastBest
+                case .reps, .holding: session.targetHeld ? nil : session.target
+                default: nil
+            }
 
             ZStack(alignment: .topLeading) {
+                // The leg — drag it to test.
                 Canvas { ctx, _ in
-                    LimbPainter.drawProtractor(in: &ctx, pivot: pivot, radius: radius, marks: .init(
-                        flexion: hinge.flexion, tilt: leveler.tilt,
-                        start: session.hasStart ? session.startAngle : nil,
-                        lastBest: session.lastBest,
-                        ghost: session.sessionBest > 0 ? session.sessionBest : nil,
-                        target: session.phase == .positioning ? nil : session.target,
-                        inTarget: inTarget,
-                        pulse: Double(session.tickPulse % 2)))
+                    LimbPainter.drawGuide(in: &ctx, pivot: pivot, radius: radius,
+                                          flexion: hinge.flexion, tilt: leveler.tilt,
+                                          start: session.hasStart ? session.startAngle : nil,
+                                          ghost: session.sessionBest > 0 ? session.sessionBest : nil,
+                                          target: goal, accent: accent)
                     LimbPainter.draw(in: &ctx, pivot: pivot, length: L, flexion: hinge.flexion, tilt: leveler.tilt,
                                      joint: session.exercise.joint,
-                                     style: .init(deviceGlow: 0.9, kneeGlow: inTarget ? 0.8 : 0.35,
-                                                  glowColor: inTarget ? RangeTheme.amber : RangeTheme.mint))
+                                     style: .init(deviceGlow: 0.9, kneeGlow: holding ? 0.8 : 0.35, glowColor: accent))
                 }
-                .allowsHitTesting(false)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            hinge.setManual(flexion: LimbPainter.flexion(at: value.location, pivot: pivot, tilt: leveler.tilt))
+                        }
+                )
+                .accessibilityLabel("Knee at \(Int(hinge.flexion.rounded())) degrees")
+                .accessibilityHint("Drag to change the angle")
 
-                // Leading half: position & reps.
-                VStack(alignment: .leading, spacing: 14) {
-                    LevelVial(tilt: leveler.tilt, label: "\(session.exercise.stableSegment.capitalized) level",
-                              isSimulated: leveler.isSimulated)
-                    if session.phase == .positioning {
-                        PositionLockView(angle: hinge.flexion, progress: session.positionProgress,
-                                         isLevel: leveler.isLevel) { session.lockStart() }
-                    } else {
-                        RepStrip(reps: session.reps, target: session.target, lastBest: session.lastBest)
-                    }
-                }
-                .padding(18)
-                .frame(width: min(340, max(220, layout.leadingWidth - 40)), alignment: .leading)
-                .rangePanel()
-                .padding(.leading, 20)
-                .padding(.top, 16)
+                // Leading: only what needs attention.
+                StatusCorner()
+                    .frame(width: onCrease ? min(300, max(200, layout.leadingWidth - 48)) : size.width * 0.4, alignment: .leading)
+                    .padding(.leading, 24)
+                    .padding(.top, 20)
 
-                // Trailing half: the number and the coach.
+                // Trailing: the number and one instruction.
                 VStack(alignment: .trailing, spacing: 6) {
                     Text(session.headline)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(inTarget ? RangeTheme.amber : .white)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(holding ? RangeTheme.amber : .white)
+                        .contentTransition(.interpolate)
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
                         Text("\(Int(hinge.flexion.rounded()))")
-                            .font(RangeTheme.numeral(size.width > 700 ? 96 : 72, weight: .bold))
+                            .font(RangeTheme.numeral(onCrease ? 112 : 64, weight: .bold))
                             .contentTransition(.numericText(value: hinge.flexion))
-                        Text("°").font(RangeTheme.numeral(44, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
+                        Text("°").font(RangeTheme.numeral(48, weight: .semibold)).foregroundStyle(RangeTheme.secondaryText)
                     }
-                    .foregroundStyle(inTarget ? RangeTheme.amber : .white)
-                    Text(session.instruction)
-                        .font(.callout)
-                        .foregroundStyle(RangeTheme.secondaryText)
+                    .foregroundStyle(holding ? RangeTheme.amber : .white)
+                    Text(session.detail(flexion: hinge.flexion, isLevel: leveler.isLevel))
+                        .font(onCrease ? .title3 : .subheadline)
                         .multilineTextAlignment(.trailing)
-                    if session.phase != .positioning {
-                        let start = Chip(text: "Start \(Int(session.startAngle))°", systemImage: "flag.fill", tint: RangeTheme.sky)
-                        let last = Chip(text: "Last \(Int(session.lastBest))°", tint: .white)
-                        let ghost = Chip(text: "Ghost \(Int(session.sessionBest.rounded()))°", systemImage: "sparkles", tint: RangeTheme.mint)
-                        let target = Chip(text: "Target \(Int(session.target))°", systemImage: "scope", tint: RangeTheme.amber)
-                        ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 6) {
-                                start; last
-                                if session.sessionBest > 0 { ghost }
-                                target
-                            }
-                            VStack(alignment: .trailing, spacing: 6) {
-                                HStack(spacing: 6) { start; last }
-                                HStack(spacing: 6) {
-                                    if session.sessionBest > 0 { ghost }
-                                    target
-                                }
-                            }
+                        .foregroundStyle(RangeTheme.secondaryText)
+                        .contentTransition(.interpolate)
+                    if session.phase == .positioning {
+                        Button { session.lockStart() } label: {
+                            Label("Start here", systemImage: "flag.fill").font(.headline).padding(.horizontal, 8)
                         }
-                        .padding(.top, 4)
+                        .buttonStyle(.borderedProminent)
+                        .tint(RangeTheme.sky)
+                        .foregroundStyle(.black)
+                        .padding(.top, 8)
                     }
-                    if session.phase == .holding {
-                        HoldRing(remaining: session.holdRemaining)
-                            .frame(width: 64, height: 64)
-                            .padding(.top, 6)
-                    }
-                    if session.phase == .matchLastBest {
-                        ProgressView(value: session.matchProgress)
-                            .tint(RangeTheme.mint)
-                            .frame(width: 160)
+                    if holding {
+                        HoldRing(remaining: session.holdRemaining).frame(width: 64, height: 64).padding(.top, 6)
                     }
                 }
-                .frame(width: min(360, max(220, layout.trailingWidth - 40)), alignment: .trailing)
-                .padding(.top, 16 + layout.cameraInset(for: CGRect(x: size.width - 380, y: 0, width: 380, height: 200)))
-                .padding(.trailing, 24)
+                .frame(width: textWidth, alignment: .trailing)
+                .padding(.top, 20 + layout.cameraInset(for: CGRect(x: size.width - 400, y: 0, width: 400, height: 220)))
+                .padding(.trailing, 28)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .animation(.spring(duration: 0.35), value: session.phase)
 
-                if let toast = session.toast {
-                    // Lower-leading corner: clear of the fold, the arc and the target line.
+                // Big moments only (new best, slow down, milestone).
+                if let toast = session.toast, toast.kind != .info {
                     ToastView(toast: toast)
                         .frame(maxWidth: min(360, max(250, layout.leadingWidth - 110)))
                         .position(x: max(145, (layout.leadingWidth - 70) / 2), y: size.height - 64)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .id(toast.id)
                 }
+
+                if hinge.isManual {
+                    ManualControlPill { hinge.useHardware() }
+                        .position(x: onCrease ? layout.creaseX + max(layout.trailingWidth, 280) / 2 : size.width - 120,
+                                  y: size.height - 36)
+                }
             }
             .animation(.spring(duration: 0.4), value: session.toast)
-            .animation(.spring(duration: 0.4), value: session.phase)
         }
     }
 }
 
-/// The patient decides where to start: any angle, as long as it's steady and level.
-struct PositionLockView: View {
-    var angle: Double
-    var progress: Double
-    var isLevel: Bool
-    var onStartHere: () -> Void
+/// Top-leading corner: the leveler while choosing a start, a warning if the thigh lifts,
+/// otherwise a quiet rep count.
+private struct StatusCorner: View {
+    @Environment(SessionEngine.self) private var session
+    @Environment(Leveler.self) private var leveler
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("Start at \(Int(angle.rounded()))°", systemImage: "flag.fill")
-                    .font(.headline)
-                    .foregroundStyle(RangeTheme.sky)
-                    .contentTransition(.numericText(value: angle))
-                Spacer()
-                Text(isLevel ? (progress > 0 ? "Hold \(Int(ceil(3 - progress * 3)))" : "Hold still") : "Level your thigh")
-                    .font(RangeTheme.numeral(13, weight: .bold))
-                    .foregroundStyle(isLevel ? RangeTheme.secondaryText : RangeTheme.amber)
-            }
-            ProgressView(value: progress).tint(RangeTheme.sky)
-            Button(action: onStartHere) {
-                Label("Start here", systemImage: "flag.fill")
+        Group {
+            if session.phase == .positioning {
+                LevelVial(tilt: leveler.tilt, label: "\(session.exercise.stableSegment.capitalized) level",
+                          isSimulated: leveler.isSimulated, compact: true)
+                    .padding(14)
+                    .rangePanel(cornerRadius: 18)
+            } else if session.compensatingNow {
+                Label(session.exercise.driftCue, systemImage: "level.fill")
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(RangeTheme.coral)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(RangeTheme.coral.opacity(0.14), in: .capsule)
+            } else if !session.reps.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(session.reps.suffix(8)) { rep in
+                        Circle()
+                            .fill(rep.compensated || rep.tooFast ? RangeTheme.coral : RangeTheme.mint)
+                            .frame(width: 9, height: 9)
+                    }
+                    Text("\(session.reps.count) rep\(session.reps.count == 1 ? "" : "s")")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(RangeTheme.secondaryText)
+                        .padding(.leading, 4)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(RangeTheme.sky)
-            .foregroundStyle(.black)
         }
+        .animation(.easeInOut(duration: 0.25), value: session.phase)
+    }
+}
+
+/// Shown while the leg is being dragged on screen instead of driven by the hinge.
+struct ManualControlPill: View {
+    var onUseHinge: () -> Void
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "hand.draw.fill").foregroundStyle(RangeTheme.sky)
+            Text("Touch control").font(.subheadline.weight(.semibold))
+            Button("Use hinge", action: onUseHinge)
+                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.bordered)
+                .tint(RangeTheme.sky)
+        }
+        .padding(.leading, 14).padding(.trailing, 6).padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: .capsule)
     }
 }
 

@@ -157,6 +157,56 @@ enum LimbPainter {
                    style: StrokeStyle(lineWidth: max(3, thickness * 0.34), lineCap: .round))
     }
 
+    // MARK: - Guide (the calm, in-session arc)
+
+    /// A quiet arc: no labels. Amber dot = where to go. Mint trail = your best today. Blue dot = your start.
+    static func drawGuide(in ctx: inout GraphicsContext, pivot: CGPoint, radius R: CGFloat,
+                          flexion: Double, tilt: Double, start: Double?, ghost: Double?,
+                          target: Double?, accent: Color) {
+        func p(_ deg: Double, _ r: CGFloat) -> CGPoint { jointPoint(pivot, flexion: deg, tilt: tilt, r) }
+        func arc(_ a: Double, _ b: Double, _ r: CGFloat) -> Path {
+            var path = Path()
+            for d in stride(from: a, through: b, by: 1) { d == a ? path.move(to: p(d, r)) : path.addLine(to: p(d, r)) }
+            path.addLine(to: p(b, r))
+            return path
+        }
+        ctx.stroke(arc(0, 150, R), with: .color(.white.opacity(0.10)), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+        for d in stride(from: 0, through: 150, by: 10) {
+            var tick = Path()
+            tick.move(to: p(Double(d), R - 6))
+            tick.addLine(to: p(Double(d), R))
+            ctx.stroke(tick, with: .color(.white.opacity(0.14)), lineWidth: 1.5)
+        }
+        let from = min(start ?? 0, flexion)
+        var wedge = Path()
+        wedge.move(to: pivot)
+        for d in stride(from: from, through: flexion, by: 1) { wedge.addLine(to: p(d, R)) }
+        wedge.addLine(to: p(flexion, R))
+        wedge.closeSubpath()
+        ctx.fill(wedge, with: .radialGradient(Gradient(colors: [accent.opacity(0.0), accent.opacity(0.22)]),
+                                              center: pivot, startRadius: 0, endRadius: R))
+        ctx.stroke(arc(from, flexion, R), with: .color(accent), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+        if let ghost, ghost > (start ?? 0) + 1 {
+            ctx.stroke(arc(start ?? 0, ghost, R + 16), with: .color(RangeTheme.mint.opacity(0.28)),
+                       style: StrokeStyle(lineWidth: 6, lineCap: .round))
+        }
+        if let start, start > 0.5 {
+            let dot = p(start, R)
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 6, y: dot.y - 6, width: 12, height: 12)), with: .color(RangeTheme.sky))
+        }
+        if let target {
+            let dot = p(target, R)
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 13, y: dot.y - 13, width: 26, height: 26)), with: .color(RangeTheme.amber.opacity(0.22)))
+            ctx.fill(Path(ellipseIn: CGRect(x: dot.x - 7, y: dot.y - 7, width: 14, height: 14)), with: .color(RangeTheme.amber))
+        }
+    }
+
+    /// Inverse of `jointPoint`: which flexion a touch at `point` corresponds to.
+    static func flexion(at point: CGPoint, pivot: CGPoint, tilt: Double) -> Double {
+        let theta = atan2(pivot.y - point.y, point.x - pivot.x) * 180 / .pi
+        return min(150, max(0, -theta - tilt))
+    }
+
     // MARK: - Protractor
 
     struct Marks {

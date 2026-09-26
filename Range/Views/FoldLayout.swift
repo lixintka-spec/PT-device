@@ -91,11 +91,7 @@ struct LevelVial: View {
                 }
             }
             .frame(height: compact ? 30 : 36)
-            if isSimulated {
-                Text("Simulated sensor · Simulator has no motion hardware")
-                    .font(.caption2)
-                    .foregroundStyle(RangeTheme.tertiaryText)
-            }
+
         }
     }
 }

@@ -83,14 +83,31 @@ final class SessionEngine {
     private(set) var startAngle: Double = 0
     var hasStart: Bool { phase != .ready && phase != .positioning }
 
+    /// One short instruction — what to do right now.
     var headline: String {
         switch phase {
         case .ready: "Ready when you are"
         case .positioning: "Choose your start"
-        case .matchLastBest: "Fold to your last best"
-        case .reps: targetHeld ? "Great session" : "Bend a little further"
-        case .holding: "Perfect. Hold."
-        case .complete: "Session saved"
+        case .matchLastBest: "Bend to \(Int(lastBest))°"
+        case .reps: targetHeld ? "Nice work" : "Bend to \(Int(target))°"
+        case .holding: "Hold"
+        case .complete: "Saved"
+        }
+    }
+
+    /// One supporting line, derived from the live angle.
+    func detail(flexion: Double, isLevel: Bool) -> String {
+        switch phase {
+        case .positioning:
+            if !isLevel { return "Level your \(exercise.stableSegment) first" }
+            return positionProgress > 0.05 ? "Setting your start… \(Int(ceil(3 - positionProgress * 3)))" : "Get comfortable, then hold still"
+        case .matchLastBest: return "Where you were last time"
+        case .reps:
+            if targetHeld { return "Close the phone to save" }
+            let toGo = Int((target - flexion).rounded())
+            return toGo > 0 ? "\(toGo)° to go" : "Hold it there"
+        case .holding: return "\(Int(ceil(holdRemaining))) more second\(Int(ceil(holdRemaining)) == 1 ? "" : "s")"
+        default: return ""
         }
     }
 
@@ -177,11 +194,11 @@ final class SessionEngine {
         if startAngle >= lastBest - 3 || matchedAnnounced {
             phase = .reps
             feedback?.say("Start set at \(Int(startAngle)) degrees. Push toward \(Int(target)).")
-            show(.success, "Start set at \(Int(startAngle))°", "Push toward \(Int(target))° from here.", "flag.fill", duration: 3)
+            show(.info, "Start set at \(Int(startAngle))°", nil, "flag.fill", duration: 2)
         } else {
             phase = .matchLastBest
             feedback?.say("Start set at \(Int(startAngle)) degrees. Now fold to your last best, \(Int(lastBest)).")
-            show(.success, "Start set at \(Int(startAngle))°", "Now fold to your last best — \(Int(lastBest))°.", "flag.fill", duration: 3)
+            show(.info, "Start set at \(Int(startAngle))°", nil, "flag.fill", duration: 2)
         }
     }
 

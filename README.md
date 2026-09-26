@@ -16,7 +16,9 @@ Built for **Bitrig Hacks: iPhone Duo Edition** (YC, Sept 26 2026). SwiftUI, iOS 
    ./scripts/demo.sh                        # beat-by-beat, press Enter between beats
    AUTO=1 ./scripts/demo.sh                 # runs straight through (recording)
    ```
-4. No scriptable hinge (e.g. Bitrig)? **… menu → Demo Controls → Run Full Demo (Autopilot)**,
+4. **Drag the leg** on the session screen to test without folding — the knee follows your finger
+   (click-and-drag with the mouse in the Simulator). Tap **Use hinge** on the pill to hand control back.
+5. No scriptable hinge (e.g. Bitrig)? **… menu → Demo Controls → Run Full Demo (Autopilot)**,
    or launch with `-autopilot`.
 
 Launch arguments: `-resetDemo` (fresh seeded data), `-startSession`, `-tab today|session|progress|care`,

@@ -35,6 +35,9 @@ final class HingeEngine {
 
     /// When true, the in-app autopilot drives the hinge (e.g. in Bitrig, where the CLI can't reach).
     var isAutopilot = false
+    /// When true, dragging the leg on screen drives the angle (testing without a physical fold).
+    private(set) var isManual = false
+    private var lastHardware: (degrees: Double, status: Status)?
 
     /// Called every tick with dt, after smoothing.
     var onTick: ((Double) -> Void)?
@@ -71,10 +74,11 @@ final class HingeEngine {
         }
         hasHardwareHinge = true
         if Self.logHinge { print("HINGE angle=\(hinge.angle.degrees) status=\(hinge.status)") }
-        guard !isAutopilot else { return }
         let newStatus: Status = if hinge.status == .closed { .closed }
             else if hinge.status == .partiallyOpen { .partiallyOpen }
             else { .fullyOpen }
+        lastHardware = (hinge.angle.degrees, newStatus)
+        guard !isAutopilot, !isManual else { return }
         ingest(degrees: hinge.angle.degrees, status: newStatus)
     }
 
@@ -107,6 +111,18 @@ final class HingeEngine {
         let closedNow = isPhysicallyClosed ? angle < 40 : ((status == .closed || targetAngle < 3) && angle < 25)
         if closedNow != isPhysicallyClosed { isPhysicallyClosed = closedNow }
         onTick?(dt)
+    }
+
+    /// Touch control: set the joint angle directly (drag the leg on screen).
+    func setManual(flexion: Double) {
+        isManual = true
+        ingest(degrees: 180 - min(150, max(0, flexion)) - calibrationOffset)
+    }
+
+    /// Hand control back to the physical hinge.
+    func useHardware() {
+        isManual = false
+        if let lastHardware { ingest(degrees: lastHardware.degrees, status: lastHardware.status) }
     }
 
     /// Zero check: the limb is straight, so whatever the hinge reads now is "0° flexion".
