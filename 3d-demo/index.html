@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>Point-cloud anatomy</title>
+  </head>
+  <body>
+    <canvas id="scene" aria-label="Rotating 3D point cloud of a human limb"></canvas>
+
+    <header class="hud hud--top">
+      <p class="title">Surface point cloud</p>
+      <dl class="readout">
+        <div><dt>Model</dt><dd id="readout-model">Leg</dd></div>
+        <div><dt>Points</dt><dd id="readout-points">—</dd></div>
+        <div><dt>Sampling</dt><dd>Poisson disk</dd></div>
+      </dl>
+    </header>
+
+    <p class="status" id="status" role="status">Sampling surface…</p>
+
+    <footer class="hud hud--bottom">
+      <div class="switch" role="group" aria-label="Model" data-active="leg">
+        <span class="switch__thumb" aria-hidden="true"></span>
+        <button type="button" data-model="arm" aria-pressed="false">Arm</button>
+        <button type="button" data-model="leg" aria-pressed="true">Leg</button>
+      </div>
+      <label class="density">
+        <span>Density</span>
+        <input id="density" type="range" min="5000" max="60000" step="1000" value="24000" />
+        <output id="density-value" for="density">24k</output>
+      </label>
+    </footer>
+
+    <p class="hint">Drag to orbit · Scroll to zoom · Space to switch</p>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
